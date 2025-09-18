@@ -103,26 +103,13 @@ mood = st.radio(
     ("😊 Happy", "😔 Sad", "😨 Anxious", "😡 Angry", "😐 Neutral", "😟 Stressed"),
 )
 
-user_input = st.text_input(
-    "Write to your AI Buddy (be honest):",
-    placeholder=f"Tell me about what's on your mind. You can say something like, 'I'm feeling {mood.split()[1].lower()} because...'"
-)
-
-col1, col2 = st.columns([1, 1])
-with col1:
-    send = st.button("Send")
-with col2:
-    quick_tip = st.button("Get a suggestion for this mood")
-
+# Display chat history
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if quick_tip:
-    with st.chat_message("assistant"):
-        st.info(random.choice(MOOD_SUGGESTIONS.get(mood, ["Take a deep breath. You're doing your best and that matters."])))
-
-if send and user_input.strip():
+# Handle user input from a new chat input box at the bottom
+if user_input := st.chat_input(placeholder=f"Tell me about what's on your mind. You can say something like, 'I'm feeling {mood.split()[1].lower()} because...'"):
     with st.chat_message("user"):
         st.markdown(user_input)
     
