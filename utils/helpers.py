@@ -3,47 +3,39 @@ import re
 
 MOOD_SUGGESTIONS = {
     "😊 Happy": [
-        "Jot down one thing that made you smile — savor it for 60 seconds.",
-        "Share your happy moment with a friend or family member.",
-        "Take a moment to appreciate the small things."
+        "Celebrate! Jot down one thing that made you smile — savor it for 60 seconds.",
+        "Share your positive energy with someone else. A quick text or call can make their day.",
+        "Reflect on why you're happy. Understanding the source of your joy can help you find more of it."
     ],
     "😔 Sad": [
         "Try a 3-2-1 grounding: name 3 things you see, 2 things you can touch, 1 thing you can hear.",
-        "Listen to a favorite song that comforts you.",
-        "Write down what's on your mind in a journal."
+        "Listen to a comforting piece of music or a podcast. Sometimes it's good to let your mind rest.",
+        "It's okay to feel this way. Allow yourself to feel your emotions without judgment."
     ],
     "😨 Anxious": [
         "Try box breathing: inhale 4s, hold 4s, exhale 4s, hold 4s — repeat 4 times.",
-        "Focus on your five senses: what do you see, hear, smell, feel, and taste right now?",
-        "Take a walk and notice the details of your surroundings."
+        "Go for a short walk outside. Focusing on your environment can help you feel more grounded.",
+        "Write down a list of what's making you anxious, then pick one small thing you can control right now."
     ],
     "😡 Angry": [
         "Step away for 2 mins. Put your hands on your belly and take slow breaths to calm your body.",
-        "Go for a run or do some other physical activity to release tension.",
-        "Write down what made you angry, then tear up the paper."
+        "Squeeze a stress ball or a pillow. Physically releasing tension can help your mind calm down.",
+        "Write down what's making you angry without holding back. Don't worry about grammar or spelling, just let it all out."
     ],
     "😐 Neutral": [
         "Take a 2-minute mindful break: notice your breath and your surroundings.",
-        "Try a gentle stretch to release any tension in your body.",
-        "Reflect on a goal you'd like to accomplish."
+        "Think of a future goal you have and write down one tiny step you can take today to get closer to it.",
+        "Notice something new in your environment. Engaging your senses can make the moment more interesting."
     ],
     "😟 Stressed": [
         "Break tasks into tiny steps — write one next tiny action you can finish in 5 minutes.",
-        "Make a cup of tea or a warm drink and enjoy it slowly.",
-        "Put on some calming music and close your eyes for a few minutes."
+        "Do a quick body scan. Close your eyes and notice where you feel tension, then consciously try to relax that area.",
+        "Listen to some calming background sounds, like rain or waves, while you work or rest."
     ]
 }
 
 def get_suggestion(mood: str) -> str:
-    tips = {
-        "😊 Happy": "Celebrate! Jot down one thing that made you smile — savor it for 60 seconds.",
-        "😔 Sad": "Try a 3-2-1 grounding: name 3 things you see, 2 things you can touch, 1 thing you can hear.",
-        "😨 Anxious": "Try box breathing: inhale 4s, hold 4s, exhale 4s, hold 4s — repeat 4 times.",
-        "😡 Angry": "Step away for 2 mins. Put your hands on your belly and take slow breaths to calm your body.",
-        "😐 Neutral": "Take a 2-minute mindful break: notice your breath and your surroundings.",
-        "😟 Stressed": "Break tasks into tiny steps — write one next tiny action you can finish in 5 minutes.",
-    }
-    return tips.get(mood, "Take a slow breath. You’re doing your best — that matters.")
+    return random.choice(MOOD_SUGGESTIONS.get(mood, ["Take a slow breath. You’re doing your best — that matters."]))
 
 def detect_crisis(text: str):
     """
@@ -67,7 +59,7 @@ def load_helplines(path: str = "resources/helplines.json"):
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except FileNotFoundError:
         # fallback default small list (user should replace with local helplines)
         return [
             {
@@ -89,6 +81,9 @@ def load_helplines(path: str = "resources/helplines.json"):
                 "url": "https://www.samaritans.org/"
             }
         ]
+    except Exception as e:
+        print(f"Error loading helplines: {e}")
+        return []
 
 def format_helplines(helplines):
     lines = []
