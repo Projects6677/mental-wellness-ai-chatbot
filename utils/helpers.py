@@ -1,6 +1,39 @@
 import json
 import re
 
+MOOD_SUGGESTIONS = {
+    "😊 Happy": [
+        "Jot down one thing that made you smile — savor it for 60 seconds.",
+        "Share your happy moment with a friend or family member.",
+        "Take a moment to appreciate the small things."
+    ],
+    "😔 Sad": [
+        "Try a 3-2-1 grounding: name 3 things you see, 2 things you can touch, 1 thing you can hear.",
+        "Listen to a favorite song that comforts you.",
+        "Write down what's on your mind in a journal."
+    ],
+    "😨 Anxious": [
+        "Try box breathing: inhale 4s, hold 4s, exhale 4s, hold 4s — repeat 4 times.",
+        "Focus on your five senses: what do you see, hear, smell, feel, and taste right now?",
+        "Take a walk and notice the details of your surroundings."
+    ],
+    "😡 Angry": [
+        "Step away for 2 mins. Put your hands on your belly and take slow breaths to calm your body.",
+        "Go for a run or do some other physical activity to release tension.",
+        "Write down what made you angry, then tear up the paper."
+    ],
+    "😐 Neutral": [
+        "Take a 2-minute mindful break: notice your breath and your surroundings.",
+        "Try a gentle stretch to release any tension in your body.",
+        "Reflect on a goal you'd like to accomplish."
+    ],
+    "😟 Stressed": [
+        "Break tasks into tiny steps — write one next tiny action you can finish in 5 minutes.",
+        "Make a cup of tea or a warm drink and enjoy it slowly.",
+        "Put on some calming music and close your eyes for a few minutes."
+    ]
+}
+
 def get_suggestion(mood: str) -> str:
     tips = {
         "😊 Happy": "Celebrate! Jot down one thing that made you smile — savor it for 60 seconds.",
