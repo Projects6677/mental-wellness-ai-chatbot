@@ -3,6 +3,7 @@ import os
 import openai
 import random
 import json
+from datetime import datetime
 
 # Set the completions model
 COMPLETIONS_MODEL = "gpt-3.5-turbo"
@@ -32,10 +33,52 @@ except ImportError as e:
     st.error(f"Error importing modules: {e}. Please ensure 'config/prompts.py' and 'utils/helpers.py' exist.")
     st.stop()
 
+# --- Helper function for sentiment analysis ---
+def get_sentiment(text):
+    """Analyzes sentiment of the user's input using the AI."""
+    sentiment_prompt = f"Analyze the sentiment of the following text. Respond with only a single word: 'positive', 'negative', or 'neutral'.\n\nText: '{text}'"
+    
+    try:
+        response = openai.ChatCompletion.create(
+            model=COMPLETIONS_MODEL,
+            messages=[{"role": "user", "content": sentiment_prompt}],
+            temperature=0.0
+        )
+        sentiment = response.choices[0].message.content.strip().lower()
+        return sentiment
+    except Exception as e:
+        st.warning(f"Sentiment analysis failed: {e}")
+        return "neutral"
+
+# --- Streak Tracker Functions ---
+def update_streak():
+    """Updates the user's check-in streak."""
+    today = datetime.now().date()
+    
+    # Initialize streak if it doesn't exist
+    if "streak_count" not in st.session_state:
+        st.session_state.streak_count = 0
+        st.session_state.last_checkin_date = None
+
+    # Check if a new day has started
+    if st.session_state.last_checkin_date is None or st.session_state.last_checkin_date < today:
+        if st.session_state.last_checkin_date and (today - st.session_state.last_checkin_date).days == 1:
+            # Continue streak
+            st.session_state.streak_count += 1
+        else:
+            # New streak or reset
+            st.session_state.streak_count = 1
+        
+        st.session_state.last_checkin_date = today
+
 # --- Streamlit UI ---
 st.set_page_config(page_title="AI Buddy", layout="centered", initial_sidebar_state="collapsed")
 st.title("AI Buddy: Your Mental Wellness Companion")
 st.markdown("A confidential and empathetic space to check in with yourself.")
+
+# Display Streak Counter
+update_streak()
+st.subheader(f"Current Streak: 🔥 {st.session_state.streak_count} day(s)")
 
 # --- Mood Tracker Buttons ---
 st.markdown("### How are you feeling right now?")
@@ -61,13 +104,18 @@ for message in st.session_state.chat_history:
 
 # --- User Input & AI Response Generation ---
 if prompt := st.chat_input("What's on your mind?"):
+    # This is where the streak is updated, as it signifies a check-in
+    update_streak()
+    
+    sentiment = get_sentiment(prompt)
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.write(prompt)
+        st.write(f"({sentiment.capitalize()} sentiment detected) {prompt}")
 
     with st.chat_message("assistant"):
         with st.spinner("AI Buddy is thinking..."):
-            messages = [{"role": "system", "content": SYSTEM_PROMPT}] + [
+            # Add a message with sentiment information to guide the AI's response
+            messages = [{"role": "system", "content": SYSTEM_PROMPT + f"\n\nUser's current emotional state is: {sentiment}. Adjust your tone and response accordingly."}] + [
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.chat_history
             ]
