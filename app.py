@@ -5,8 +5,9 @@ import openai
 from datetime import datetime
 import random
 import time
+import re
 
-from config.prompts import SYSTEM_PROMPT
+from config.prompts import SYSTEM_PROMPT, build_messages
 from utils.helpers import (
     get_suggestion,
     detect_crisis,
@@ -23,15 +24,7 @@ OPENAI_API_KEY = (
     else os.environ.get("OPENAI_API_KEY")
 )
 
-# --- TEMPORARY FIX: For debugging purposes, you can paste your key here directly.
-# REMOVE THIS LINE AFTER YOU'VE FIXED YOUR SECRETS.TOML FILE.
-# OPENAI_API_KEY = "sk-proj-..." # Paste your full key here
-# --- END TEMPORARY FIX ---
-
-# Diagnostic check to see what key the app is using.
-if OPENAI_API_KEY:
-    st.info(f"Using API key starting with: {OPENAI_API_KEY[:4]}...{OPENAI_API_KEY[-4:]}")
-else:
+if not OPENAI_API_KEY:
     st.warning("OPENAI_API_KEY not found. Please check your secrets.toml or environment variables.")
     st.stop()
 
@@ -59,18 +52,14 @@ def update_streak():
     """Updates the user's check-in streak based on daily interactions."""
     today = datetime.now().date()
     
-    # Initialize streak if it doesn't exist
     if "streak_count" not in st.session_state:
         st.session_state.streak_count = 0
         st.session_state.last_checkin_date = None
 
-    # Check if a new day has started
     if st.session_state.last_checkin_date is None or st.session_state.last_checkin_date < today:
         if st.session_state.last_checkin_date and (today - st.session_state.last_checkin_date).days == 1:
-            # Continue streak
             st.session_state.streak_count += 1
         else:
-            # New streak or reset
             st.session_state.streak_count = 1
         
         st.session_state.last_checkin_date = today
@@ -97,6 +86,7 @@ with st.sidebar:
     )
     if st.button("Clear session"):
         st.session_state.clear()
+        st.rerun()
 
 # Session state for chat history
 if "history" not in st.session_state:
@@ -105,7 +95,6 @@ if "history" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-# Load helplines (resources/helplines.json)
 helplines = load_helplines("resources/helplines.json")
 
 # Mood selector
@@ -125,32 +114,25 @@ with col1:
 with col2:
     quick_tip = st.button("Get a suggestion for this mood")
 
-# Display conversation history using chat elements
 for message in st.session_state.history:
-    content = message.get("content", message.get("text", ""))
-    if message["role"] == "user":
-        with st.chat_message("user"):
-            st.markdown(content)
-    else:
-        with st.chat_message("assistant"):
-            st.markdown(content)
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Quick suggestion only (no LLM call)
 if quick_tip:
     with st.chat_message("assistant"):
         st.info(random.choice(MOOD_SUGGESTIONS.get(mood, ["Take a deep breath. You're doing your best and that matters."])))
 
-# When user sends message
 if send and user_input.strip():
     with st.chat_message("user"):
         st.markdown(user_input)
-    st.session_state.history.append({"role": "user", "content": user_input})
     
+    st.session_state.history.append({"role": "user", "content": user_input})
     update_streak()
     
     sentiment = get_sentiment(user_input)
     
     crisis_flag, evidence = detect_crisis(user_input)
+    
     if crisis_flag:
         with st.chat_message("assistant"):
             st.error(
@@ -165,37 +147,32 @@ if send and user_input.strip():
             "Do NOT provide instructions for self-harm. Give crisis resources and encourage contacting professionals."
         )
         st.session_state.messages.append({"role": "system", "content": system_prompt})
-    else:
-        st.session_state.messages.append({"role": "user", "content": user_input})
+        st.stop()
 
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    
     try:
         with st.chat_message("assistant"):
-            with st.spinner("AI Buddy is thinking..."):
-                full_response = ""
-                message_placeholder = st.empty()
-
-                for chunk in client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
-                    temperature=0.8,
-                    stream=True
-                ):
-                    full_response += chunk.choices[0].delta.get("content", "")
-                    message_placeholder.markdown(full_response + "▌")
-                
-                message_placeholder.markdown(full_response)
-                ai_text = full_response
-
+            message_placeholder = st.empty()
+            full_response = ""
+            for chunk in client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+                temperature=0.8,
+                stream=True
+            ):
+                full_response += chunk.choices[0].delta.get("content", "")
+                message_placeholder.markdown(full_response + "▌")
+            message_placeholder.markdown(full_response)
+            ai_text = full_response
     except Exception as e:
         with st.chat_message("assistant"):
             st.error(f"OpenAI API error: {e}")
-            ai_text = (
-                "Sorry — I'm having trouble connecting to my brain. Try again in a moment."
-            )
+            ai_text = "Sorry — I'm having trouble connecting to my brain. Try again in a moment."
     
     st.session_state.history.append({"role": "assistant", "content": ai_text})
+    st.experimental_rerun()
 
-# Footer suggestions + resources
 st.markdown("---")
 st.subheader("Quick Resources")
 st.write("If you want a fast coping technique for this mood:")
@@ -203,7 +180,6 @@ st.info(get_suggestion(mood))
 st.markdown("**Helplines & support**")
 st.markdown(format_helplines(helplines))
 
-# Option to download transcript (session only)
 if st.session_state.history:
     transcript = "\n\n".join(
         [f"{h['role'].upper()}: {h['content']}" for h in st.session_state.history]
