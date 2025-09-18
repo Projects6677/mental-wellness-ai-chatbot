@@ -1,23 +1,21 @@
 import os
-import json
 import streamlit as st
 import openai
 from datetime import datetime
 import random
 import time
 import re
+import json
 
-from config.prompts import SYSTEM_PROMPT, build_messages
+from config.prompts import SYSTEM_PROMPT
 from utils.helpers import (
     get_suggestion,
     detect_crisis,
     load_helplines,
-    format_helplines,
     MOOD_SUGGESTIONS,
 )
 
 # --- CONFIG / API KEY ---
-# Attempt to get the key from Streamlit Cloud Secrets or local environment variables.
 OPENAI_API_KEY = (
     st.secrets.get("OPENAI_API_KEY", None)
     if hasattr(st, "secrets")
@@ -88,10 +86,7 @@ with st.sidebar:
         st.session_state.clear()
         st.rerun()
 
-# Session state for chat history
-if "history" not in st.session_state:
-    st.session_state.history = []
-
+# Session state for conversation history, including system prompt
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -103,20 +98,22 @@ mood = st.radio(
     ("😊 Happy", "😔 Sad", "😨 Anxious", "😡 Angry", "😐 Neutral", "😟 Stressed"),
 )
 
-# Display chat history
-for message in st.session_state.history:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# Display chat history from session state
+for message in st.session_state.messages:
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
 # Handle user input from a new chat input box at the bottom
 if user_input := st.chat_input(placeholder=f"Tell me about what's on your mind. You can say something like, 'I'm feeling {mood.split()[1].lower()} because...'"):
     with st.chat_message("user"):
         st.markdown(user_input)
     
-    st.session_state.history.append({"role": "user", "content": user_input})
+    st.session_state.messages.append({"role": "user", "content": user_input})
     update_streak()
     
-    sentiment = get_sentiment(user_input)
+    # We will remove this for the final version as it's for diagnostics
+    # sentiment = get_sentiment(user_input)
     
     crisis_flag, evidence = detect_crisis(user_input)
     
@@ -142,15 +139,13 @@ if user_input := st.chat_input(placeholder=f"Tell me about what's on your mind. 
         st.session_state.messages.append({"role": "system", "content": system_prompt})
         st.stop()
 
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    
     try:
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             full_response = ""
             for chunk in client.chat.completions.create(
                 model="gpt-3.5-turbo",
-                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+                messages=st.session_state.messages,
                 temperature=0.8,
                 stream=True
             ):
@@ -163,8 +158,8 @@ if user_input := st.chat_input(placeholder=f"Tell me about what's on your mind. 
             st.error(f"OpenAI API error: {e}")
             ai_text = "Sorry — I'm having trouble connecting to my brain. Try again in a moment."
     
-    st.session_state.history.append({"role": "assistant", "content": ai_text})
-    st.experimental_rerun()
+    st.session_state.messages.append({"role": "assistant", "content": ai_text})
+    st.rerun()
 
 st.markdown("---")
 st.subheader("Quick Resources")
@@ -180,8 +175,8 @@ if helplines:
             s += f" — {helpline.get('url')}"
         st.markdown(s)
 
-if st.session_state.history:
+if len(st.session_state.messages) > 1:
     transcript = "\n\n".join(
-        [f"{h['role'].upper()}: {h['content']}" for h in st.session_state.history]
+        [f"{h['role'].upper()}: {h['content']}" for h in st.session_state.messages if h['role'] != 'system']
     )
     st.download_button("Download transcript (txt)", data=transcript, file_name="transcript.txt")
