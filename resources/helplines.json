@@ -1,0 +1,26 @@
+[
+  {
+    "country": "Global",
+    "service": "Befrienders Worldwide (find local centers)",
+    "number": "",
+    "url": "https://www.befrienders.org/"
+  },
+  {
+    "country": "US",
+    "service": "National Suicide & Crisis Lifeline",
+    "number": "988",
+    "url": "https://988lifeline.org/"
+  },
+  {
+    "country": "UK",
+    "service": "Samaritans",
+    "number": "116 123",
+    "url": "https://www.samaritans.org/"
+  },
+  {
+    "country": "LOCAL_PLACEHOLDER",
+    "service": "Please add your country helpline here",
+    "number": "<YOUR LOCAL HELPLINE>",
+    "url": ""
+  }
+]
