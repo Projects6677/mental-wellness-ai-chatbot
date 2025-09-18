@@ -139,7 +139,13 @@ if send and user_input.strip():
                 "⚠️ I detect language that suggests you may be in severe distress or crisis. "
                 "If you are in immediate danger, please call your local emergency number now."
             )
-            st.markdown(format_helplines(helplines))
+            for helpline in helplines:
+                s = f"**{helpline.get('country','')}** — {helpline.get('service','')}"
+                if helpline.get("number"):
+                    s += f" — **{helpline.get('number')}**"
+                if helpline.get("url"):
+                    s += f" — {helpline.get('url')}"
+                st.markdown(s)
         
         system_prompt = (
             SYSTEM_PROMPT
@@ -178,7 +184,14 @@ st.subheader("Quick Resources")
 st.write("If you want a fast coping technique for this mood:")
 st.info(get_suggestion(mood))
 st.markdown("**Helplines & support**")
-st.markdown(format_helplines(helplines))
+if helplines:
+    for helpline in helplines:
+        s = f"**{helpline.get('country','')}** — {helpline.get('service','')}"
+        if helpline.get("number"):
+            s += f" — **{helpline.get('number')}**"
+        if helpline.get("url"):
+            s += f" — {helpline.get('url')}"
+        st.markdown(s)
 
 if st.session_state.history:
     transcript = "\n\n".join(
