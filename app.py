@@ -28,7 +28,9 @@ if not OPENAI_API_KEY:
     st.warning(
         "OPENAI_API_KEY not found. Locally set env var or set Streamlit Secret OPENAI_API_KEY."
     )
-openai.api_key = OPENAI_API_KEY
+
+# Initialize OpenAI client with the new syntax
+client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # --- Helper functions for new features ---
 def get_sentiment(text):
@@ -36,7 +38,7 @@ def get_sentiment(text):
     sentiment_prompt = f"Analyze the sentiment of the following text. Respond with only a single word: 'positive', 'negative', or 'neutral'.\n\nText: '{text}'"
     
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": sentiment_prompt}],
             temperature=0.0
@@ -171,7 +173,7 @@ if send and user_input.strip():
                 full_response = ""
                 message_placeholder = st.empty()
 
-                for chunk in openai.ChatCompletion.create(
+                for chunk in client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
                     temperature=0.8,
