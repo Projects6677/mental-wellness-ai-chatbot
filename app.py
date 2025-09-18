@@ -6,7 +6,7 @@ from datetime import datetime
 import random
 import time
 
-from config.prompts import SYSTEM_PROMPT, build_messages
+from config.prompts import SYSTEM_PROMPT
 from utils.helpers import (
     get_suggestion,
     detect_crisis,
@@ -92,7 +92,10 @@ with st.sidebar:
 
 # Session state for chat history
 if "history" not in st.session_state:
-    st.session_state.history = [{"role": "assistant", "text": "Hi there. I'm AI Buddy. How can I support you today?"}]
+    st.session_state.history = []
+
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
 # Load helplines (resources/helplines.json)
 helplines = load_helplines("resources/helplines.json")
@@ -103,9 +106,8 @@ mood = st.radio(
     ("😊 Happy", "😔 Sad", "😨 Anxious", "😡 Angry", "😐 Neutral", "😟 Stressed"),
 )
 
-user_input = st.text_area(
-    "Write to your AI Buddy (be honest):", 
-    height=120,
+user_input = st.text_input(
+    "Write to your AI Buddy (be honest):",
     placeholder=f"Tell me about what's on your mind. You can say something like, 'I'm feeling {mood.split()[1].lower()} because...'"
 )
 
@@ -115,78 +117,78 @@ with col1:
 with col2:
     quick_tip = st.button("Get a suggestion for this mood")
 
+# Display conversation history using chat elements
+for message in st.session_state.history:
+    if message["role"] == "user":
+        with st.chat_message("user"):
+            st.markdown(message["content"])
+    else:
+        with st.chat_message("assistant"):
+            st.markdown(message["content"])
+
 # Quick suggestion only (no LLM call)
 if quick_tip:
-    st.info(random.choice(MOOD_SUGGESTIONS.get(mood, "Take a deep breath. You're doing your best and that matters.")))
+    with st.chat_message("assistant"):
+        st.info(random.choice(MOOD_SUGGESTIONS.get(mood, ["Take a deep breath. You're doing your best and that matters."])))
 
 # When user sends message
 if send and user_input.strip():
-    # Update streak since a new message signifies a check-in
+    with st.chat_message("user"):
+        st.markdown(user_input)
+    st.session_state.history.append({"role": "user", "content": user_input})
+    
+    # Update streak
     update_streak()
     
     # Analyze sentiment
     sentiment = get_sentiment(user_input)
     
-    # show user's message
-    st.session_state.history.append({"role": "user", "text": user_input})
-
     # Crisis detection (simple keyword-based). If crisis -> show helplines prominently
     crisis_flag, evidence = detect_crisis(user_input)
     if crisis_flag:
-        st.error(
-            "⚠️ I detect language that suggests you may be in severe distress or crisis. "
-            "If you are in immediate danger, please call your local emergency number now."
-        )
-        st.markdown(format_helplines(helplines))
-        # still let the AI reply with supportive non-clinical wording, but emphasize help
+        with st.chat_message("assistant"):
+            st.error(
+                "⚠️ I detect language that suggests you may be in severe distress or crisis. "
+                "If you are in immediate danger, please call your local emergency number now."
+            )
+            st.markdown(format_helplines(helplines))
+        
         system_prompt = (
             SYSTEM_PROMPT
             + "\nNOTE: The user may be in crisis. Prioritize calm, supportive language and encourage seeking immediate help. "
             "Do NOT provide instructions for self-harm. Give crisis resources and encourage contacting professionals."
         )
+        st.session_state.messages.append({"role": "system", "content": system_prompt})
     else:
-        system_prompt = SYSTEM_PROMPT + f"\n\nUser's detected sentiment is '{sentiment}'. Respond with an appropriate tone based on this emotion."
-
-    # Build messages for ChatCompletion
-    messages = build_messages(system_prompt, mood, user_input)
+        st.session_state.messages.append({"role": "user", "content": user_input})
 
     # Call OpenAI (chat completion)
     try:
-        with st.spinner("AI Buddy is thinking..."):
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                max_tokens=350,
-                temperature=0.8,
-                stream=True
-            )
-            
-            # Stream response for a better user experience
-            full_response = ""
-            message_placeholder = st.empty()
-            for chunk in response:
-                delta_content = chunk["choices"][0]["delta"].get("content", "")
-                full_response += delta_content
-                message_placeholder.markdown(full_response + "▌")
-            
-            message_placeholder.markdown(full_response)
-            ai_text = full_response
+        with st.chat_message("assistant"):
+            with st.spinner("AI Buddy is thinking..."):
+                full_response = ""
+                message_placeholder = st.empty()
+
+                for chunk in openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+                    temperature=0.8,
+                    stream=True
+                ):
+                    full_response += chunk.choices[0].delta.get("content", "")
+                    message_placeholder.markdown(full_response + "▌")
+                
+                message_placeholder.markdown(full_response)
+                ai_text = full_response
 
     except Exception as e:
-        st.error(f"OpenAI API error: {e}")
-        ai_text = "Sorry — I'm having trouble connecting to my brain. Try again in a moment."
-
-    # Append assistant reply to history
-    st.session_state.history.append({"role": "assistant", "text": ai_text})
-
-# Display conversation history
-if st.session_state.history:
-    st.markdown("---")
-    for msg in st.session_state.history[::-1]:
-        if msg["role"] == "user":
-            st.markdown(f"**You:** {msg['text']}")
-        else:
-            st.markdown(f"**AI Buddy:** {msg['text']}")
+        with st.chat_message("assistant"):
+            st.error(f"OpenAI API error: {e}")
+            ai_text = (
+                "Sorry — I'm having trouble connecting to my brain. Try again in a moment."
+            )
+    
+    st.session_state.history.append({"role": "assistant", "content": ai_text})
 
 # Footer suggestions + resources
 st.markdown("---")
@@ -199,6 +201,6 @@ st.markdown(format_helplines(helplines))
 # Option to download transcript (session only)
 if st.session_state.history:
     transcript = "\n\n".join(
-        [f"{h['role'].upper()}: {h['text']}" for h in st.session_state.history]
+        [f"{h['role'].upper()}: {h['content']}" for h in st.session_state.history]
     )
     st.download_button("Download transcript (txt)", data=transcript, file_name="transcript.txt")
