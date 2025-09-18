@@ -16,18 +16,24 @@ from utils.helpers import (
 )
 
 # --- CONFIG / API KEY ---
-# Streamlit Cloud: put your key in Secrets (OPENAI_API_KEY)
-# Local: export OPENAI_API_KEY or use .streamlit/secrets.toml for local dev
+# Attempt to get the key from Streamlit Cloud Secrets or local environment variables.
 OPENAI_API_KEY = (
     st.secrets.get("OPENAI_API_KEY", None)
     if hasattr(st, "secrets")
     else os.environ.get("OPENAI_API_KEY")
 )
 
-if not OPENAI_API_KEY:
-    st.warning(
-        "OPENAI_API_KEY not found. Locally set env var or set Streamlit Secret OPENAI_API_KEY."
-    )
+# --- TEMPORARY FIX: For debugging purposes, you can paste your key here directly.
+# REMOVE THIS LINE AFTER YOU'VE FIXED YOUR SECRETS.TOML FILE.
+# OPENAI_API_KEY = "sk-proj-..." # Paste your full key here
+# --- END TEMPORARY FIX ---
+
+# Diagnostic check to see what key the app is using.
+if OPENAI_API_KEY:
+    st.info(f"Using API key starting with: {OPENAI_API_KEY[:4]}...{OPENAI_API_KEY[-4:]}")
+else:
+    st.warning("OPENAI_API_KEY not found. Please check your secrets.toml or environment variables.")
+    st.stop()
 
 # Initialize OpenAI client with the new syntax
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
@@ -121,7 +127,6 @@ with col2:
 
 # Display conversation history using chat elements
 for message in st.session_state.history:
-    # Use .get() to safely access 'content' or fallback to 'text' for old messages
     content = message.get("content", message.get("text", ""))
     if message["role"] == "user":
         with st.chat_message("user"):
@@ -141,13 +146,10 @@ if send and user_input.strip():
         st.markdown(user_input)
     st.session_state.history.append({"role": "user", "content": user_input})
     
-    # Update streak
     update_streak()
     
-    # Analyze sentiment
     sentiment = get_sentiment(user_input)
     
-    # Crisis detection (simple keyword-based). If crisis -> show helplines prominently
     crisis_flag, evidence = detect_crisis(user_input)
     if crisis_flag:
         with st.chat_message("assistant"):
@@ -166,7 +168,6 @@ if send and user_input.strip():
     else:
         st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Call OpenAI (chat completion)
     try:
         with st.chat_message("assistant"):
             with st.spinner("AI Buddy is thinking..."):
