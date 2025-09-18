@@ -119,12 +119,14 @@ with col2:
 
 # Display conversation history using chat elements
 for message in st.session_state.history:
+    # Use .get() to safely access 'content' or fallback to 'text' for old messages
+    content = message.get("content", message.get("text", ""))
     if message["role"] == "user":
         with st.chat_message("user"):
-            st.markdown(message["content"])
+            st.markdown(content)
     else:
         with st.chat_message("assistant"):
-            st.markdown(message["content"])
+            st.markdown(content)
 
 # Quick suggestion only (no LLM call)
 if quick_tip:
