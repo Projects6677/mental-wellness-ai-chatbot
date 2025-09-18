@@ -2,6 +2,8 @@ import os
 import json
 import streamlit as st
 import openai
+from datetime import datetime
+import random
 
 from config.prompts import SYSTEM_PROMPT, build_messages
 from utils.helpers import (
@@ -26,6 +28,43 @@ if not OPENAI_API_KEY:
     )
 openai.api_key = OPENAI_API_KEY
 
+# --- Helper functions for new features ---
+def get_sentiment(text):
+    """Analyzes sentiment of the user's input using the AI."""
+    sentiment_prompt = f"Analyze the sentiment of the following text. Respond with only a single word: 'positive', 'negative', or 'neutral'.\n\nText: '{text}'"
+    
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": sentiment_prompt}],
+            temperature=0.0
+        )
+        sentiment = response.choices[0].message.content.strip().lower()
+        return sentiment
+    except Exception as e:
+        st.warning(f"Sentiment analysis failed: {e}")
+        return "neutral"
+
+def update_streak():
+    """Updates the user's check-in streak based on daily interactions."""
+    today = datetime.now().date()
+    
+    # Initialize streak if it doesn't exist
+    if "streak_count" not in st.session_state:
+        st.session_state.streak_count = 0
+        st.session_state.last_checkin_date = None
+
+    # Check if a new day has started
+    if st.session_state.last_checkin_date is None or st.session_state.last_checkin_date < today:
+        if st.session_state.last_checkin_date and (today - st.session_state.last_checkin_date).days == 1:
+            # Continue streak
+            st.session_state.streak_count += 1
+        else:
+            # New streak or reset
+            st.session_state.streak_count = 1
+        
+        st.session_state.last_checkin_date = today
+
 # --- UI ---
 st.set_page_config(page_title="AI Buddy — Youth Mental Wellness", layout="centered")
 st.title("🤝 AI Buddy — Youth Mental Wellness")
@@ -35,6 +74,10 @@ An **anonymous** and **empathetic** AI listener for quick check-ins, mood tracki
 **Note:** This tool is not a replacement for professional care. If you are in immediate danger, call your local emergency number.
 """
 )
+
+# Display Streak Counter
+update_streak()
+st.markdown(f"🔥 **Current Streak:** {st.session_state.streak_count} day(s)")
 
 # Sidebar
 with st.sidebar:
@@ -47,7 +90,7 @@ with st.sidebar:
 
 # Session state for chat history
 if "history" not in st.session_state:
-    st.session_state.history = []  # list of {"role":"user"|"assistant","text":...}
+    st.session_state.history = [{"role": "assistant", "text": "Hi there. I'm AI Buddy. How can I support you today?"}]
 
 # Load helplines (resources/helplines.json)
 helplines = load_helplines("resources/helplines.json")
@@ -72,6 +115,12 @@ if quick_tip:
 
 # When user sends message
 if send and user_input.strip():
+    # Update streak since a new message signifies a check-in
+    update_streak()
+    
+    # Analyze sentiment
+    sentiment = get_sentiment(user_input)
+    
     # show user's message
     st.session_state.history.append({"role": "user", "text": user_input})
 
@@ -90,7 +139,7 @@ if send and user_input.strip():
             "Do NOT provide instructions for self-harm. Give crisis resources and encourage contacting professionals."
         )
     else:
-        system_prompt = SYSTEM_PROMPT
+        system_prompt = SYSTEM_PROMPT + f"\n\nUser's detected sentiment is '{sentiment}'. Respond with an appropriate tone based on this emotion."
 
     # Build messages for ChatCompletion
     messages = build_messages(system_prompt, mood, user_input)
