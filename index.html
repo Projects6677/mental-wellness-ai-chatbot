@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Buddy — Youth Mental Wellness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+        }
+        .chat-container {
+            height: calc(100vh - 8rem); /* Adjust for header/footer */
+            overflow-y: auto;
+            -ms-overflow-style: none; /* for Internet Explorer, Edge */
+            scrollbar-width: none; /* for Firefox */
+        }
+        .chat-container::-webkit-scrollbar {
+            display: none; /* for Chrome, Safari */
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden bg-gray-900 text-white">
+    <!-- Main UI Container -->
+    <div class="flex h-screen">
+
+        <!-- Sidebar -->
+        <aside class="w-64 flex-shrink-0 bg-gray-900 border-r border-gray-700 p-4 flex flex-col">
+            <div class="flex items-center gap-2 mb-6">
+                <span class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-white">AI</span>
+                <span class="text-xl font-semibold">AI Buddy</span>
+            </div>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors mb-4" onclick="clearSession()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                New Chat
+            </button>
+            <nav class="flex-grow overflow-y-auto">
+                <div class="text-sm text-gray-400 font-semibold mb-2">Mood Check-in</div>
+                <div class="space-y-2 mb-4" id="mood-selector">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
+                        <span class="text-2xl mr-2">😊</span> Happy
+                    </div>
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                        <span class="text-2xl mr-2">😔</span> Sad
+                    </div>
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                        <span class="text-2xl mr-2">😨</span> Anxious
+                    </div>
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                        <span class="text-2xl mr-2">😡</span> Angry
+                    </div>
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                        <span class="text-2xl mr-2">😐</span> Neutral
+                    </div>
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                        <span class="text-2xl mr-2">😟</span> Stressed
+                    </div>
+                </div>
+                <div class="flex-grow"></div>
+            </nav>
+            <div class="mt-auto pt-4 border-t border-gray-700">
+                <p class="text-sm text-gray-400">Current Streak:</p>
+                <p class="text-xl font-bold" id="streak-counter">0 day(s)</p>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="flex-grow flex flex-col bg-gray-800">
+            <!-- Header -->
+            <header class="p-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+                <h1 class="text-xl font-semibold">AI Buddy Chat</h1>
+                <div class="text-sm text-gray-400">
+                    <span class="hidden md:inline">Your personal wellness companion.</span>
+                </div>
+            </header>
+            
+            <!-- Chat Container -->
+            <div id="chat-container" class="chat-container flex flex-col p-6 space-y-4 flex-grow overflow-y-auto">
+                <!-- Chat messages will be dynamically added here -->
+            </div>
+
+            <!-- Crisis Detection Card -->
+            <div id="crisis-card" class="hidden p-4 mx-6 my-4 bg-red-800 rounded-lg shadow-lg">
+                <p class="text-lg font-semibold mb-2">⚠️ Immediate Help Needed</p>
+                <p class="text-sm">I detect language suggesting severe distress. If you are in immediate danger, please call your local emergency number now. You can also reach out to the resources below.</p>
+                <div id="crisis-resources" class="mt-4 text-xs font-medium"></div>
+            </div>
+
+            <!-- Quick Tip Card -->
+            <div id="tip-card" class="hidden p-4 mx-6 my-4 bg-blue-800 rounded-lg shadow-lg">
+                <p class="text-lg font-semibold mb-2">🌱 Quick Tip</p>
+                <p class="text-sm" id="tip-content"></p>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="p-4 flex-shrink-0 bg-gray-900 border-t border-gray-700">
+                <div class="relative flex items-center">
+                    <input type="text" id="user-input" class="w-full bg-gray-800 text-white rounded-xl py-3 px-4 pr-16 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Ask AI Buddy anything..." onkeydown="handleInput(event)">
+                    <button id="send-btn" class="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full transition-colors" onclick="sendMessage()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 19-7-19-3 3v13"/></svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Data and Configuration
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=`;
+        const SYSTEM_PROMPT = `
+            You are AI Buddy, a compassionate, non-judgmental conversational assistant. Your job is to listen actively, reflect feelings, validate the user's experience, and offer short, practical coping strategies or resources.
+            Keep replies concise, empathetic, and avoid medical jargon. Encourage seeking professional help when appropriate, and clearly advise contacting emergency services if the user appears to be in danger.
+        `;
+        const HELPLINES = [
+            { "country": "Global", "service": "Befrienders Worldwide (find local centers)", "url": "https://www.befrienders.org/" },
+            { "country": "US", "service": "National Suicide & Crisis Lifeline", "number": "988", "url": "https://988lifeline.org/" },
+            { "country": "UK", "service": "Samaritans", "number": "116 123", "url": "https://www.samaritans.org/" }
+        ];
+        const CRISIS_PATTERNS = [
+            /suicid/i, /kill myself/i, /end my life/i, /want to die/i, /hurt myself/i,
+            /self[- ]harm/i, /overdose/i, /hang myself/i, /i'll die/i, /no reason to live/i
+        ];
+        const MOOD_SUGGESTIONS = {
+            "😊 Happy": "Celebrate! Jot down one thing that made you smile — savor it for 60 seconds.",
+            "😔 Sad": "Try a 3-2-1 grounding: name 3 things you see, 2 things you can touch, 1 thing you can hear.",
+            "😨 Anxious": "Try box breathing: inhale 4s, hold 4s, exhale 4s, hold 4s — repeat 4 times.",
+            "😡 Angry": "Step away for 2 mins. Put your hands on your belly and take slow breaths to calm your body.",
+            "😐 Neutral": "Take a 2-minute mindful break: notice your breath and your surroundings.",
+            "😟 Stressed": "Break tasks into tiny steps — write one next tiny action you can finish in 5 minutes.",
+        };
+        const MOODS = ["😊 Happy", "😔 Sad", "😨 Anxious", "😡 Angry", "😐 Neutral", "😟 Stressed"];
+
+        let chatHistory = [];
+        let mood = "😊 Happy";
+        let streak = 0;
+        let lastCheckinDate = null;
+
+        // UI Elements
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const moodOptions = document.querySelectorAll('.mood-option');
+        const streakCounter = document.getElementById('streak-counter');
+        const tipCard = document.getElementById('tip-card');
+        const tipContent = document.getElementById('tip-content');
+        const crisisCard = document.getElementById('crisis-card');
+        const crisisResources = document.getElementById('crisis-resources');
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStreak();
+            selectMood("😊 Happy");
+            displayInitialMessage();
+        });
+
+        function displayInitialMessage() {
+            addMessage("assistant", "Hi there. I'm AI Buddy, a safe space to talk. How can I support you today?");
+        }
+
+        function clearSession() {
+            chatHistory = [];
+            mood = "😊 Happy";
+            streak = 0;
+            lastCheckinDate = null;
+            chatContainer.innerHTML = '';
+            tipCard.classList.add('hidden');
+            crisisCard.classList.add('hidden');
+            updateStreak();
+            selectMood("😊 Happy");
+            displayInitialMessage();
+        }
+
+        function updateStreak() {
+            const today = new Date().toDateString();
+            if (lastCheckinDate === today) return;
+
+            const storedLastCheckin = localStorage.getItem('lastCheckin');
+            const storedStreak = parseInt(localStorage.getItem('streak') || '0', 10);
+            
+            if (storedLastCheckin) {
+                const oneDay = 24 * 60 * 60 * 1000;
+                const lastDate = new Date(storedLastCheckin);
+                const diffDays = Math.round(Math.abs((new Date() - lastDate) / oneDay));
+                if (diffDays === 1) {
+                    streak = storedStreak + 1;
+                } else if (diffDays > 1) {
+                    streak = 1;
+                } else {
+                    streak = storedStreak;
+                }
+            } else {
+                streak = 1;
+            }
+
+            localStorage.setItem('lastCheckin', today);
+            localStorage.setItem('streak', streak.toString());
+            streakCounter.textContent = `${streak} day(s)`;
+        }
+
+        // Event Listeners
+        moodOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                selectMood(option.textContent.trim().split(' ')[1]);
+            });
+        });
+
+        function selectMood(selectedMood) {
+            mood = MOODS.find(m => m.includes(selectedMood));
+            moodOptions.forEach(option => {
+                option.classList.remove('bg-gray-800');
+                if (option.textContent.trim().includes(selectedMood)) {
+                    option.classList.add('bg-gray-800');
+                }
+            });
+        }
+
+        function handleInput(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Chat Messaging Logic
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // Update streak on a new message
+            updateStreak();
+
+            // Clear tip and crisis cards
+            tipCard.classList.add('hidden');
+            crisisCard.classList.add('hidden');
+            
+            // Add user message to UI
+            addMessage("user", text);
+            userInput.value = '';
+
+            // Check for crisis keywords
+            const isCrisis = CRISIS_PATTERNS.some(pattern => pattern.test(text));
+            if (isCrisis) {
+                displayCrisisResources();
+            }
+            
+            // AI message placeholder
+            const placeholder = addMessage("assistant", "...");
+            
+            // Build AI prompt
+            const prompt = `MOOD: ${mood}. User says: ${text}. Instructions for the assistant: respond as a calm, empathetic peer. Offer one short supportive reflection, one coping suggestion, and one resource/action the user can take next.`;
+            const systemInstruction = {
+                parts: [{ text: isCrisis ? `${SYSTEM_PROMPT} \n\nNOTE: The user may be in crisis. Prioritize calm, supportive language and encourage seeking immediate help. Do NOT provide instructions for self-harm.` : SYSTEM_PROMPT }]
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: systemInstruction,
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const aiResponse = result.candidates[0].content.parts[0].text;
+                
+                // Update placeholder with full response
+                updateMessage(placeholder, aiResponse);
+
+                // Show a quick tip based on the selected mood
+                displayQuickTip();
+
+            } catch (error) {
+                updateMessage(placeholder, "I'm sorry, I'm having trouble connecting right now. Please try again later.");
+                console.error("Fetch error:", error);
+            }
+        }
+
+        function addMessage(role, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            messageDiv.innerHTML = `
+                <div class="flex items-start gap-3 max-w-[75%]">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full ${role === 'user' ? 'bg-blue-600' : 'bg-gray-700'} flex items-center justify-center text-xs font-semibold">
+                        ${role === 'user' ? 'You' : 'AI'}
+                    </div>
+                    <div class="bg-gray-700 rounded-xl p-4 text-sm break-words whitespace-pre-wrap">
+                        ${text}
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return messageDiv.querySelector('div:last-child'); // return the message bubble for updates
+        }
+
+        function updateMessage(element, newText) {
+            element.innerHTML = newText;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function displayQuickTip() {
+            const tipText = MOOD_SUGGESTIONS[mood] || "Take a deep breath. You're doing your best and that matters.";
+            tipCard.classList.remove('hidden');
+            tipContent.textContent = tipText;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function displayCrisisResources() {
+            crisisCard.classList.remove('hidden');
+            crisisResources.innerHTML = HELPLINES.map(h => {
+                let text = `${h.country} - ${h.service}`;
+                if (h.number) text += ` - Call: ${h.number}`;
+                if (h.url) text += ` - <a href="${h.url}" class="underline text-blue-400" target="_blank">Website</a>`;
+                return text;
+            }).join('<br>');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
