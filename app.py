@@ -4,6 +4,7 @@ import streamlit as st
 import openai
 from datetime import datetime
 import random
+import time
 
 from config.prompts import SYSTEM_PROMPT, build_messages
 from utils.helpers import (
@@ -11,6 +12,7 @@ from utils.helpers import (
     detect_crisis,
     load_helplines,
     format_helplines,
+    MOOD_SUGGESTIONS,
 )
 
 # --- CONFIG / API KEY ---
@@ -101,7 +103,11 @@ mood = st.radio(
     ("😊 Happy", "😔 Sad", "😨 Anxious", "😡 Angry", "😐 Neutral", "😟 Stressed"),
 )
 
-user_input = st.text_area("Write to your AI Buddy (be honest):", height=120)
+user_input = st.text_area(
+    "Write to your AI Buddy (be honest):", 
+    height=120,
+    placeholder=f"Tell me about what's on your mind. You can say something like, 'I'm feeling {mood.split()[1].lower()} because...'"
+)
 
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -111,7 +117,7 @@ with col2:
 
 # Quick suggestion only (no LLM call)
 if quick_tip:
-    st.info(get_suggestion(mood))
+    st.info(random.choice(MOOD_SUGGESTIONS.get(mood, "Take a deep breath. You're doing your best and that matters.")))
 
 # When user sends message
 if send and user_input.strip():
@@ -152,13 +158,23 @@ if send and user_input.strip():
                 messages=messages,
                 max_tokens=350,
                 temperature=0.8,
+                stream=True
             )
-            ai_text = response.choices[0].message.content.strip()
+            
+            # Stream response for a better user experience
+            full_response = ""
+            message_placeholder = st.empty()
+            for chunk in response:
+                delta_content = chunk["choices"][0]["delta"].get("content", "")
+                full_response += delta_content
+                message_placeholder.markdown(full_response + "▌")
+            
+            message_placeholder.markdown(full_response)
+            ai_text = full_response
+
     except Exception as e:
         st.error(f"OpenAI API error: {e}")
-        ai_text = (
-            "Sorry — I'm having trouble connecting to my brain. Try again in a moment."
-        )
+        ai_text = "Sorry — I'm having trouble connecting to my brain. Try again in a moment."
 
     # Append assistant reply to history
     st.session_state.history.append({"role": "assistant", "text": ai_text})
