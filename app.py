@@ -6,6 +6,8 @@ import random
 import time
 import re
 import json
+import pandas as pd
+import altair as alt
 
 from config.prompts import SYSTEM_PROMPT
 from utils.helpers import (
@@ -67,7 +69,7 @@ st.set_page_config(page_title="AI Buddy — Youth Mental Wellness", layout="cent
 st.title("🤝 AI Buddy — Youth Mental Wellness")
 st.markdown(
     """
-An **anonymous** and **empathetic** AI listener for quick check-ins, mood tracking and self-help suggestions.
+An **anonymous** and **emphetic** AI listener for quick check-ins, mood tracking and self-help suggestions.
 **Note:** This tool is not a replacement for professional care. If you are in immediate danger, call your local emergency number.
 """
 )
@@ -85,6 +87,24 @@ with st.sidebar:
     if st.button("Clear session"):
         st.session_state.clear()
         st.rerun()
+    
+    # --- Mood Tracker Chart (in sidebar) ---
+    st.subheader("Your Mood Tracker")
+    if "mood_history" not in st.session_state:
+        st.session_state.mood_history = []
+    
+    if st.session_state.mood_history:
+        mood_df = pd.DataFrame(st.session_state.mood_history)
+        chart = alt.Chart(mood_df).mark_line(point=True).encode(
+            x=alt.X("time", axis=None),
+            y=alt.Y("mood_score", axis=None),
+            tooltip=["time", "mood"],
+        ).properties(
+            title="Mood over time",
+            height=200
+        ).interactive()
+        st.altair_chart(chart, use_container_width=True)
+
 
 # Session state for conversation history, including system prompt
 if "messages" not in st.session_state:
@@ -105,16 +125,25 @@ for message in st.session_state.messages:
             st.markdown(message["content"])
 
 # Handle user input from a new chat input box at the bottom
-if user_input := st.chat_input(placeholder=f"Tell me about what's on your mind. You can say something like, 'I'm feeling {mood.split()[1].lower()} because...'"):
+if user_input := st.chat_input(placeholder=f"Tell me about what's on your mind. You can say something like, 'I'm feeling {mood.split()[1].lower()} because...'"
+):
     with st.chat_message("user"):
         st.markdown(user_input)
     
     st.session_state.messages.append({"role": "user", "content": user_input})
     update_streak()
     
-    # We will remove this for the final version as it's for diagnostics
-    # sentiment = get_sentiment(user_input)
-    
+    # --- Track mood for the chart ---
+    mood_to_score = {
+        "😊 Happy": 5, "😐 Neutral": 3, "😔 Sad": 2, 
+        "😟 Stressed": 2, "😨 Anxious": 1, "😡 Angry": 1,
+    }
+    st.session_state.mood_history.append({
+        "time": datetime.now(),
+        "mood": mood,
+        "mood_score": mood_to_score.get(mood, 3)
+    })
+
     crisis_flag, evidence = detect_crisis(user_input)
     
     if crisis_flag:
