@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Buddy — Youth Mental Wellness</title>
+    <title>MindMate — Youth Mental Wellness</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,13 +20,57 @@
             padding: 0;
         }
         .chat-container {
-            height: calc(100vh - 8rem); /* Adjust for header/footer */
+            height: calc(100vh - 8rem);
             overflow-y: auto;
-            -ms-overflow-style: none; /* for Internet Explorer, Edge */
-            scrollbar-width: none; /* for Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         .chat-container::-webkit-scrollbar {
-            display: none; /* for Chrome, Safari */
+            display: none;
+        }
+        .calendar-day {
+            width: 2.2rem;
+            height: 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: #e0e0e0;
+            position: relative;
+        }
+        .mood-dot {
+            position: absolute;
+            bottom: 0.2rem;
+            right: 0.2rem;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+        }
+        #chart-container canvas {
+            max-width: 100%;
+        }
+        /* Custom scrollbar for demo purposes */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background-color: #4a5568;
+            border-radius: 4px;
+        }
+        @keyframes pulse-breathing {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        .animate-pulse-breathing {
+            animation: pulse-breathing 4s infinite ease-in-out;
+        }
+        .badge-icon {
+            font-size: 2rem;
+            line-height: 1;
         }
     </style>
 </head>
@@ -33,52 +79,138 @@
     <div class="flex h-screen">
 
         <!-- Sidebar -->
-        <aside class="w-64 flex-shrink-0 bg-gray-900 border-r border-gray-700 p-4 flex flex-col">
+        <aside class="w-64 flex-shrink-0 bg-gray-900 border-r border-gray-700 p-4 flex flex-col overflow-y-auto">
             <div class="flex items-center gap-2 mb-6">
-                <span class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-white">AI</span>
-                <span class="text-xl font-semibold">AI Buddy</span>
+                <span class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-white">MM</span>
+                <span class="text-xl font-semibold">MindMate</span>
             </div>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors mb-4" onclick="clearSession()">
+            
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors mb-2" onclick="clearSession()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                New Chat
+                New Session
             </button>
-            <nav class="flex-grow overflow-y-auto">
+            <button class="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors mb-4" onclick="clearChat()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                Clear Chat
+            </button>
+
+
+            <!-- Daily Check-In & Mood Journal -->
+            <div class="flex-shrink-0 pb-4 border-b border-gray-700">
                 <div class="text-sm text-gray-400 font-semibold mb-2">Mood Check-in</div>
                 <div class="space-y-2 mb-4" id="mood-selector">
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700 transition-colors">
                         <span class="text-2xl mr-2">😊</span> Happy
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
                         <span class="text-2xl mr-2">😔</span> Sad
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
                         <span class="text-2xl mr-2">😨</span> Anxious
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
                         <span class="text-2xl mr-2">😡</span> Angry
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
                         <span class="text-2xl mr-2">😐</span> Neutral
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
                         <span class="text-2xl mr-2">😟</span> Stressed
                     </div>
                 </div>
-                <div class="flex-grow"></div>
-            </nav>
-            <div class="mt-auto pt-4 border-t border-gray-700">
-                <p class="text-sm text-gray-400">Current Streak:</p>
-                <p class="text-xl font-bold" id="streak-counter">0 day(s)</p>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="showJournalVault()">Journaling Vault</button>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="startBreathingExercise()">Breathing Guide</button>
             </div>
+            
+            <!-- Mood Calendar & Streak -->
+            <div class="mt-4 flex-shrink-0 border-b border-gray-700 pb-4">
+                <p class="text-sm text-gray-400 font-semibold mb-2">My Progress</p>
+                <div id="shareable-card" class="bg-gray-800 rounded-lg p-2 mb-2">
+                    <p class="text-sm text-gray-400">Current Streak:</p>
+                    <p class="text-xl font-bold text-green-400 mb-2" id="streak-counter">0 day(s)</p>
+                    <div class="text-sm text-gray-400">My Goal:</div>
+                    <p class="text-lg font-bold truncate text-yellow-400" id="goal-display">Not set</p>
+                </div>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="shareProgress()">
+                    Share Progress
+                </button>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="showMoodChart()">
+                    Show Mood Chart
+                </button>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="generateSummary()">
+                    AI Summary
+                </button>
+
+                <div id="mood-calendar" class="grid grid-cols-7 gap-1 mt-4">
+                    <!-- Calendar days will be rendered here -->
+                </div>
+                <div class="flex items-center justify-between mt-4">
+                    <button class="text-gray-400 hover:text-white" onclick="changeMonth(-1)">&#9664;</button>
+                    <span id="current-month" class="text-sm font-medium"></span>
+                    <button class="text-gray-400 hover:text-white" onclick="changeMonth(1)">&#9654;</button>
+                </div>
+            </div>
+
+            <!-- AI Personas & Daily Affirmation -->
+            <div class="mt-4 flex-shrink-0 border-b border-gray-700 pb-4">
+                <div class="text-sm text-gray-400 font-semibold mb-2">Daily Affirmation</div>
+                <div id="daily-affirmation" class="p-2 bg-gray-800 rounded-lg text-sm italic text-gray-300 mb-4"></div>
+
+                <div class="text-sm text-gray-400 font-semibold mb-2">AI Buddy Persona</div>
+                <select id="persona-selector" class="w-full bg-gray-800 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="calm_listener">Calm Listener</option>
+                    <option value="motivational_coach">Motivational Coach</option>
+                    <option value="gentle_friend">Gentle Friend</option>
+                </select>
+                <div class="text-sm text-gray-400 font-semibold mt-4 mb-2">My Goals</div>
+                <input type="text" id="goal-input" class="w-full bg-gray-800 text-white rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="e.g., Run a 5K, Learn to code...">
+                <button class="w-full mt-2 bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm" onclick="saveGoal()">Set Goal</button>
+            </div>
+            
+            <!-- AI Buddy Avatar -->
+            <div class="mt-4 flex-shrink-0 border-b border-gray-700 pb-4">
+                <div class="text-sm text-gray-400 font-semibold mb-2">Buddy Avatar</div>
+                <div class="flex justify-around items-center space-x-2">
+                    <button class="bg-gray-800 hover:bg-gray-700 p-2 rounded-lg transition-colors text-3xl" onclick="changeAvatar('robot')">🤖</button>
+                    <button class="bg-gray-800 hover:bg-gray-700 p-2 rounded-lg transition-colors text-3xl" onclick="changeAvatar('cat')">🐱</button>
+                    <button class="bg-gray-800 hover:bg-gray-700 p-2 rounded-lg transition-colors text-3xl" onclick="changeAvatar('owl')">🦉</button>
+                </div>
+            </div>
+
+            <!-- Badges -->
+            <div class="mt-4 flex-shrink-0 pb-4 border-b border-gray-700">
+                <div class="text-sm text-gray-400 font-semibold mb-2">My Badges</div>
+                <div id="badge-container" class="flex flex-wrap gap-2">
+                    <!-- Badges will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Wellness Challenges -->
+            <div class="mt-4 flex-shrink-0 pb-4">
+                <div class="text-sm text-gray-400 font-semibold mb-2">Wellness Challenge</div>
+                <div id="challenge-container" class="bg-gray-800 rounded-lg p-4">
+                    <p class="text-lg font-semibold mb-2">7-Day Wellness Challenge</p>
+                    <div id="challenge-days" class="flex justify-between text-sm mb-2"></div>
+                    <p id="current-challenge-task" class="text-sm italic text-gray-400"></p>
+                    <button class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded-lg text-sm" onclick="completeChallengeDay()">
+                        Complete Day <span id="current-day-num">1</span>
+                    </button>
+                </div>
+            </div>
+
         </aside>
 
         <!-- Main Chat Area -->
         <main class="flex-grow flex flex-col bg-gray-800">
             <!-- Header -->
             <header class="p-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
-                <h1 class="text-xl font-semibold">AI Buddy Chat</h1>
-                <div class="text-sm text-gray-400">
-                    <span class="hidden md:inline">Your personal wellness companion.</span>
+                <h1 class="text-xl font-semibold">MindMate Chat</h1>
+                <div class="text-sm text-gray-400 flex items-center space-x-2">
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded-full transition-colors" id="voice-input-btn" onclick="toggleVoiceInput()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mic"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                    </button>
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-full transition-colors" onclick="toggleVentingMode()">Start Venting</button>
+                    <button id="vent-btn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded-full transition-colors hidden" onclick="toggleVentingMode()">Venting Mode: On</button>
                 </div>
             </header>
             
@@ -87,10 +219,48 @@
                 <!-- Chat messages will be dynamically added here -->
             </div>
 
+            <!-- Modal for Breathing Exercise -->
+            <div id="breathing-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 hidden items-center justify-center">
+                <div class="relative w-96 h-96 flex flex-col items-center justify-center">
+                    <div id="breathing-circle" class="w-64 h-64 bg-blue-500 rounded-full transition-all duration-1000 ease-in-out transform"></div>
+                    <p id="breathing-text" class="absolute text-2xl font-bold">Inhale</p>
+                    <button class="absolute bottom-10 bg-gray-700 text-white py-2 px-4 rounded-lg" onclick="stopBreathingExercise()">Stop</button>
+                </div>
+            </div>
+
+            <!-- Modal for Mood Chart -->
+            <div id="mood-chart-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 hidden items-center justify-center">
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-1/2">
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
+                        <h2 class="text-xl font-semibold">Weekly Mood Trends</h2>
+                        <button class="text-gray-400 hover:text-white" onclick="closeMoodChart()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6L6 18"/><path d="M6 6L18 18"/></svg>
+                        </button>
+                    </div>
+                    <canvas id="mood-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Modal for Journaling Vault -->
+            <div id="journal-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 hidden items-center justify-center">
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-1/2 flex flex-col h-[80%]">
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
+                        <h2 class="text-xl font-semibold">Your Private Journal</h2>
+                        <button class="text-gray-400 hover:text-white" onclick="closeJournalVault()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6L6 18"/><path d="M6 6L18 18"/></svg>
+                        </button>
+                    </div>
+                    <textarea id="journal-entry" class="flex-grow w-full p-4 bg-gray-700 rounded-lg text-white resize-none" placeholder="Write your thoughts here..."></textarea>
+                    <div class="mt-4 flex justify-end space-x-2">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg" onclick="saveJournalEntry()">Save</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Crisis Detection Card -->
             <div id="crisis-card" class="hidden p-4 mx-6 my-4 bg-red-800 rounded-lg shadow-lg">
                 <p class="text-lg font-semibold mb-2">⚠️ Immediate Help Needed</p>
-                <p class="text-sm">I detect language suggesting severe distress. If you are in immediate danger, please call your local emergency number now. You can also reach out to the resources below.</p>
+                <p class="text-sm">I detect language suggesting severe distress. If you are in immediate danger, please reach out to the resources below. You are not alone.</p>
                 <div id="crisis-resources" class="mt-4 text-xs font-medium"></div>
             </div>
 
@@ -98,12 +268,17 @@
             <div id="tip-card" class="hidden p-4 mx-6 my-4 bg-blue-800 rounded-lg shadow-lg">
                 <p class="text-lg font-semibold mb-2">🌱 Quick Tip</p>
                 <p class="text-sm" id="tip-content"></p>
+                <div class="flex space-x-2 mt-2">
+                    <button class="text-sm text-blue-200 underline" onclick="displayPlaylist('Spotify')">Spotify Playlist</button>
+                    <button class="text-sm text-blue-200 underline" onclick="displayPlaylist('YouTube')">YouTube Playlist</button>
+                    <button class="text-sm text-blue-200 underline" onclick="generateCopingPlan()">Get Coping Plan</button>
+                </div>
             </div>
 
             <!-- Chat Input Area -->
             <div class="p-4 flex-shrink-0 bg-gray-900 border-t border-gray-700">
                 <div class="relative flex items-center">
-                    <input type="text" id="user-input" class="w-full bg-gray-800 text-white rounded-xl py-3 px-4 pr-16 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Ask AI Buddy anything..." onkeydown="handleInput(event)">
+                    <input type="text" id="user-input" class="w-full bg-gray-800 text-white rounded-xl py-3 px-4 pr-16 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Ask MindMate anything..." onkeydown="handleInput(event)">
                     <button id="send-btn" class="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full transition-colors" onclick="sendMessage()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="m22 2-7 19-7-19-3 3v13"/></svg>
                     </button>
@@ -114,12 +289,19 @@
 
     <script>
         // Data and Configuration
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=`;
-        const SYSTEM_PROMPT = `
-            You are AI Buddy, a compassionate, non-judgmental conversational assistant. Your job is to listen actively, reflect feelings, validate the user's experience, and offer short, practical coping strategies or resources.
+        // IMPORTANT: Replace the empty string below with your actual API key.
+        // DO NOT share your API key publicly.
+        const API_KEY = "";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+        const BASE_SYSTEM_PROMPT = `
+            You are MindMate, a compassionate, non-judgmental conversational assistant. Your job is to listen actively, reflect feelings, validate the user's experience, and offer short, practical coping strategies or resources.
             Keep replies concise, empathetic, and avoid medical jargon. Encourage seeking professional help when appropriate, and clearly advise contacting emergency services if the user appears to be in danger.
         `;
         const HELPLINES = [
+            // Indian Helplines
+            { "country": "India", "service": "Aasra", "number": "91-98204-66726", "url": "http://www.aasra.info/" },
+            { "country": "India", "service": "Vandrevala Foundation", "number": "91-73045-21444", "url": "https://www.vandrevalafoundation.com/" },
+            // Global/Other Helplines
             { "country": "Global", "service": "Befrienders Worldwide (find local centers)", "url": "https://www.befrienders.org/" },
             { "country": "US", "service": "National Suicide & Crisis Lifeline", "number": "988", "url": "https://988lifeline.org/" },
             { "country": "UK", "service": "Samaritans", "number": "116 123", "url": "https://www.samaritans.org/" }
@@ -129,20 +311,77 @@
             /self[- ]harm/i, /overdose/i, /hang myself/i, /i'll die/i, /no reason to live/i
         ];
         const MOOD_SUGGESTIONS = {
-            "😊 Happy": "Celebrate! Jot down one thing that made you smile — savor it for 60 seconds.",
-            "😔 Sad": "Try a 3-2-1 grounding: name 3 things you see, 2 things you can touch, 1 thing you can hear.",
-            "😨 Anxious": "Try box breathing: inhale 4s, hold 4s, exhale 4s, hold 4s — repeat 4 times.",
-            "😡 Angry": "Step away for 2 mins. Put your hands on your belly and take slow breaths to calm your body.",
-            "😐 Neutral": "Take a 2-minute mindful break: notice your breath and your surroundings.",
-            "😟 Stressed": "Break tasks into tiny steps — write one next tiny action you can finish in 5 minutes.",
+            "😊 Happy": "Celebrate! Jot down one thing that made you smile — savor it for 60 seconds. Acknowledge what makes you feel good. ",
+            "😔 Sad": "Try a 3-2-1 grounding: name 3 things you see, 2 things you can touch, 1 thing you can hear. This helps bring you back to the present moment.",
+            "😨 Anxious": "Try box breathing: inhale for 4 seconds, hold for 4, exhale for 4, hold for 4 — repeat 4 times. This can calm your nervous system.",
+            "😡 Angry": "Step away for 2 mins. Put your hands on your belly and take slow breaths to calm your body. Physical distance from the situation can help.",
+            "😐 Neutral": "Take a 2-minute mindful break: notice your breath and your surroundings. It's a great way to reset and be present.",
+            "😟 Stressed": "Break tasks into tiny steps — write one next tiny action you can finish in 5 minutes. Small steps add up to big progress.",
         };
         const MOODS = ["😊 Happy", "😔 Sad", "😨 Anxious", "😡 Angry", "😐 Neutral", "😟 Stressed"];
+        const MOOD_COLORS = {
+            "😊 Happy": "#22c55e",
+            "😔 Sad": "#60a5fa",
+            "😨 Anxious": "#f97316",
+            "😡 Angry": "#ef4444",
+            "😐 Neutral": "#94a3b8",
+            "😟 Stressed": "#facc15",
+        };
+        const MOOD_SCORES = {
+            "😊 Happy": 5, "😔 Sad": 1, "😨 Anxious": 2, "😡 Angry": 1, "😐 Neutral": 3, "😟 Stressed": 2,
+        };
+        const PERSONAS = {
+            calm_listener: {
+                name: "Calm Listener",
+                prompt: "You are a very calm, patient, and soothing conversational partner. Your replies are gentle and focus on active listening and validation. You use quiet, reassuring language."
+            },
+            motivational_coach: {
+                name: "Motivational Coach",
+                prompt: "You are an energetic and motivating life coach. Your replies are encouraging, solution-oriented, and focused on helping the user take small, positive actions. You use empowering language and offer a lot of praise."
+            },
+            gentle_friend: {
+                name: "Gentle Friend",
+                prompt: "You are a gentle and supportive friend. Your replies are conversational and friendly, offering peer-to-peer support. You use casual, warm, and comforting language."
+            }
+        };
+        const AVATARS = {
+            robot: "🤖",
+            cat: "🐱",
+            owl: "🦉"
+        };
+        const CHALLENGES = [
+            "Write down three things you are grateful for today.",
+            "Take a 5-minute break and focus on your breathing. Inhale for 4, exhale for 4.",
+            "List one small task you've been putting off and complete it.",
+            "Connect with someone you care about. Send a thoughtful text or make a quick call.",
+            "Spend 10 minutes outside and pay attention to your surroundings.",
+            "Listen to a favorite song and just focus on the music.",
+            "Try a new healthy snack or drink. A small change can make a big difference."
+        ];
+        const BADGES = {
+            'streak_7': { emoji: '🔥', title: '7-Day Streak', desc: 'Maintained a check-in streak for 7 days.' },
+            'challenge_complete': { emoji: '🏆', title: 'Challenge Master', desc: 'Completed the 7-day wellness challenge.' },
+            'first_journal': { emoji: '✍️', title: 'First Journal', desc: 'Wrote your first private journal entry.' },
+            'breathing_5': { emoji: '🧘', title: 'Mindful Master', desc: 'Completed 5 mindful breathing exercises.' },
+        };
+        const AFFIRMATIONS = [
+            "You are stronger than you think. Today, focus on progress, not perfection.",
+            "Your feelings are valid. Take a moment to acknowledge them without judgment.",
+            "Small steps lead to great distances. Celebrate every little victory.",
+            "You have the power to create a peaceful space within yourself.",
+            "Be kind to yourself today. You are doing the best you can."
+        ];
 
         let chatHistory = [];
         let mood = "😊 Happy";
-        let streak = 0;
-        let lastCheckinDate = null;
-
+        let ventingMode = false;
+        let recognition = null;
+        let isListening = false;
+        let synthesis = window.speechSynthesis;
+        let currentCalendarDate = new Date();
+        let myChart = null;
+        let chatTimer = null;
+        
         // UI Elements
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
@@ -152,73 +391,326 @@
         const tipContent = document.getElementById('tip-content');
         const crisisCard = document.getElementById('crisis-card');
         const crisisResources = document.getElementById('crisis-resources');
+        const ventBtn = document.getElementById('vent-btn');
+        const goalInput = document.getElementById('goal-input');
+        const personaSelector = document.getElementById('persona-selector');
+        const moodCalendar = document.getElementById('mood-calendar');
+        const currentMonthDisplay = document.getElementById('current-month');
+        const challengeDaysContainer = document.getElementById('challenge-days');
+        const currentChallengeTask = document.getElementById('current-challenge-task');
+        const currentDayNum = document.getElementById('current-day-num');
+        const breathingModal = document.getElementById('breathing-modal');
+        const breathingCircle = document.getElementById('breathing-circle');
+        const breathingText = document.getElementById('breathing-text');
+        const voiceInputBtn = document.getElementById('voice-input-btn');
+        const moodChartModal = document.getElementById('mood-chart-modal');
+        const badgeContainer = document.getElementById('badge-container');
+        const goalDisplay = document.getElementById('goal-display');
+        const dailyAffirmation = document.getElementById('daily-affirmation');
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
+            loadState();
             updateStreak();
+            updateMoodCalendar();
             selectMood("😊 Happy");
             displayInitialMessage();
+            renderChallenges();
+            renderBadges();
+            updateGoalDisplay();
+            displayDailyAffirmation();
         });
 
-        function displayInitialMessage() {
-            addMessage("assistant", "Hi there. I'm AI Buddy, a safe space to talk. How can I support you today?");
+        // --- Core Functions ---
+        function loadState() {
+            const storedGoal = localStorage.getItem('userGoal');
+            if (storedGoal) {
+                goalInput.value = storedGoal;
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('userGoal', goalInput.value);
+            updateGoalDisplay();
+        }
+
+        function updateGoalDisplay() {
+            const storedGoal = localStorage.getItem('userGoal');
+            if (storedGoal && storedGoal !== "") {
+                goalDisplay.textContent = storedGoal;
+            } else {
+                goalDisplay.textContent = "Not set";
+            }
         }
 
         function clearSession() {
+            localStorage.clear();
             chatHistory = [];
             mood = "😊 Happy";
-            streak = 0;
-            lastCheckinDate = null;
+            ventingMode = false;
             chatContainer.innerHTML = '';
             tipCard.classList.add('hidden');
             crisisCard.classList.add('hidden');
+            ventBtn.classList.add('hidden');
+            goalInput.value = '';
             updateStreak();
+            updateMoodCalendar();
             selectMood("😊 Happy");
             displayInitialMessage();
+            renderChallenges();
+            renderBadges();
+            updateGoalDisplay();
+        }
+
+        function clearChat() {
+            chatHistory = [];
+            chatContainer.innerHTML = '';
+            displayInitialMessage();
+            tipCard.classList.add('hidden');
+            crisisCard.classList.add('hidden');
         }
 
         function updateStreak() {
             const today = new Date().toDateString();
-            if (lastCheckinDate === today) return;
-
-            const storedLastCheckin = localStorage.getItem('lastCheckin');
-            const storedStreak = parseInt(localStorage.getItem('streak') || '0', 10);
+            let storedLastCheckin = localStorage.getItem('lastCheckin');
+            let storedStreak = parseInt(localStorage.getItem('streak') || '0', 10);
             
-            if (storedLastCheckin) {
+            if (storedLastCheckin && storedLastCheckin !== today) {
                 const oneDay = 24 * 60 * 60 * 1000;
                 const lastDate = new Date(storedLastCheckin);
                 const diffDays = Math.round(Math.abs((new Date() - lastDate) / oneDay));
                 if (diffDays === 1) {
-                    streak = storedStreak + 1;
-                } else if (diffDays > 1) {
-                    streak = 1;
+                    storedStreak += 1;
                 } else {
-                    streak = storedStreak;
+                    storedStreak = 1; // Reset streak
                 }
-            } else {
-                streak = 1;
+            } else if (!storedLastCheckin) {
+                storedStreak = 1;
             }
 
             localStorage.setItem('lastCheckin', today);
-            localStorage.setItem('streak', streak.toString());
-            streakCounter.textContent = `${streak} day(s)`;
+            localStorage.setItem('streak', storedStreak.toString());
+            streakCounter.textContent = `${storedStreak} day(s)`;
+            
+            if (storedStreak >= 7 && !getBadgeStatus('streak_7')) {
+                grantBadge('streak_7');
+            }
+        }
+        
+        function getSentiment(text) {
+            const lowerText = text.toLowerCase();
+            if (lowerText.includes('happy') || lowerText.includes('great') || lowerText.includes('good') || lowerText.includes('excited') || lowerText.includes('joy')) return "😊 Happy";
+            if (lowerText.includes('sad') || lowerText.includes('unhappy') || lowerText.includes('lonely') || lowerText.includes('depressed')) return "😔 Sad";
+            if (lowerText.includes('anxious') || lowerText.includes('worried') || lowerText.includes('nervous') || lowerText.includes('scared')) return "😨 Anxious";
+            if (lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('frustrated') || lowerText.includes('irritated')) return "😡 Angry";
+            if (lowerText.includes('stressed') || lowerText.includes('overwhelmed') || lowerText.includes('exhausted')) return "😟 Stressed";
+            return "😐 Neutral";
         }
 
-        // Event Listeners
+        // --- Badges ---
+        function getBadges() {
+            return JSON.parse(localStorage.getItem('badges') || '[]');
+        }
+
+        function getBadgeStatus(badgeId) {
+            const badges = getBadges();
+            return badges.includes(badgeId);
+        }
+
+        function grantBadge(badgeId) {
+            const badges = getBadges();
+            if (!badges.includes(badgeId)) {
+                badges.push(badgeId);
+                localStorage.setItem('badges', JSON.stringify(badges));
+                addMessage("system", `🎉 Congratulations! You earned a new badge: **${BADGES[badgeId].title}**!`);
+                renderBadges();
+            }
+        }
+
+        function renderBadges() {
+            badgeContainer.innerHTML = '';
+            const badges = getBadges();
+            if (badges.length === 0) {
+                badgeContainer.innerHTML = `<p class="text-sm text-gray-500 italic">No badges earned yet. Keep going!</p>`;
+            }
+            badges.forEach(badgeId => {
+                const badgeInfo = BADGES[badgeId];
+                const badgeDiv = document.createElement('div');
+                badgeDiv.className = 'flex flex-col items-center bg-gray-800 p-2 rounded-lg text-xs w-16 text-center';
+                badgeDiv.innerHTML = `
+                    <span class="badge-icon">${badgeInfo.emoji}</span>
+                    <span class="mt-1 font-semibold">${badgeInfo.title}</span>
+                `;
+                badgeContainer.appendChild(badgeDiv);
+            });
+        }
+
+        // --- Mood Journal & Calendar ---
+        function saveMoodEntry(selectedMood) {
+            let moodJournal = JSON.parse(localStorage.getItem('moodJournal') || '{}');
+            const today = new Date().toISOString().split('T')[0];
+            moodJournal[today] = selectedMood;
+            localStorage.setItem('moodJournal', JSON.stringify(moodJournal));
+            updateMoodCalendar();
+        }
+
+        function updateMoodCalendar() {
+            moodCalendar.innerHTML = '';
+            const moodJournal = JSON.parse(localStorage.getItem('moodJournal') || '{}');
+            const today = new Date();
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            currentMonthDisplay.textContent = currentCalendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDiv = document.createElement('div');
+                moodCalendar.appendChild(emptyDiv);
+            }
+
+            for (let day = 1; day <= lastDate; day++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+                dayDiv.textContent = day;
+
+                const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const moodEmoji = moodJournal[dateString];
+
+                if (moodEmoji) {
+                    dayDiv.classList.add('bg-gray-700');
+                    const moodDot = document.createElement('div');
+                    moodDot.className = 'mood-dot';
+                    moodDot.style.backgroundColor = MOOD_COLORS[moodEmoji] || '#94a3b8';
+                    dayDiv.appendChild(moodDot);
+                } else {
+                    dayDiv.classList.add('bg-gray-800');
+                }
+
+                if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                    dayDiv.classList.add('border-2', 'border-blue-500');
+                }
+
+                moodCalendar.appendChild(dayDiv);
+            }
+        }
+        
+        function changeMonth(delta) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+            updateMoodCalendar();
+        }
+
+        // --- Journaling Vault ---
+        function showJournalVault() {
+            const vault = document.getElementById('journal-modal');
+            const journalEntry = document.getElementById('journal-entry');
+            const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]').map(entry => atob(entry));
+            journalEntry.value = entries.join('\n\n---\n\n');
+            vault.classList.remove('hidden');
+            vault.classList.add('flex');
+            grantBadge('first_journal');
+        }
+
+        function closeJournalVault() {
+            const vault = document.getElementById('journal-modal');
+            vault.classList.add('hidden');
+            vault.classList.remove('flex');
+        }
+
+        function saveJournalEntry() {
+            const journalEntry = document.getElementById('journal-entry');
+            const entries = journalEntry.value.split('\n\n---\n\n').map(entry => btoa(entry));
+            localStorage.setItem('journalEntries', JSON.stringify(entries));
+            addMessage("system", "Your journal entry has been saved securely.");
+            closeJournalVault();
+        }
+
+        // --- Wellness Challenges ---
+        function renderChallenges() {
+            challengeDaysContainer.innerHTML = '';
+            const challengeProgress = JSON.parse(localStorage.getItem('challengeProgress') || '{}');
+            const today = new Date().toISOString().split('T')[0];
+            const currentDay = challengeProgress.currentDay || 1;
+            const lastCompletionDate = challengeProgress.lastCompletionDate || null;
+            
+            for (let i = 1; i <= 7; i++) {
+                const dayDot = document.createElement('div');
+                dayDot.className = `w-4 h-4 rounded-full border-2 transition-colors flex items-center justify-center`;
+                dayDot.textContent = i;
+                if (i < currentDay) {
+                    dayDot.classList.add('bg-green-500', 'border-green-500');
+                } else if (i === currentDay) {
+                    dayDot.classList.add('bg-yellow-400', 'border-yellow-400', 'font-bold');
+                } else {
+                    dayDot.classList.add('bg-gray-700', 'border-gray-500');
+                }
+                challengeDaysContainer.appendChild(dayDot);
+            }
+            
+            currentDayNum.textContent = currentDay;
+            currentChallengeTask.textContent = CHALLENGES[currentDay - 1] || "Challenge complete! Start a new one.";
+            if (currentDay > 7) {
+                document.querySelector('#challenge-container button').textContent = "Challenge Complete!";
+                document.querySelector('#challenge-container button').disabled = true;
+                grantBadge('challenge_complete');
+            } else {
+                document.querySelector('#challenge-container button').textContent = `Complete Day ${currentDay}`;
+                document.querySelector('#challenge-container button').disabled = false;
+            }
+        }
+
+        function completeChallengeDay() {
+            let challengeProgress = JSON.parse(localStorage.getItem('challengeProgress') || '{}');
+            const today = new Date().toISOString().split('T')[0];
+            const lastCompletionDate = challengeProgress.lastCompletionDate;
+            
+            if (lastCompletionDate === today) {
+                return;
+            }
+            
+            const currentDay = (challengeProgress.currentDay || 0) + 1;
+            challengeProgress.currentDay = currentDay;
+            challengeProgress.lastCompletionDate = today;
+            localStorage.setItem('challengeProgress', JSON.stringify(challengeProgress));
+            renderChallenges();
+        }
+
+        // --- UI Interactions ---
         moodOptions.forEach(option => {
             option.addEventListener('click', () => {
-                selectMood(option.textContent.trim().split(' ')[1]);
+                const selectedMood = option.textContent.trim();
+                selectMood(selectedMood);
+                saveMoodEntry(selectedMood);
             });
         });
 
         function selectMood(selectedMood) {
-            mood = MOODS.find(m => m.includes(selectedMood));
+            mood = selectedMood;
             moodOptions.forEach(option => {
                 option.classList.remove('bg-gray-800');
-                if (option.textContent.trim().includes(selectedMood)) {
+                if (option.textContent.trim() === selectedMood) {
                     option.classList.add('bg-gray-800');
                 }
             });
+        }
+        
+        function toggleVentingMode() {
+            ventingMode = !ventingMode;
+            if (ventingMode) {
+                ventBtn.classList.remove('hidden');
+                document.querySelector('#chat-container').classList.add('bg-gray-700/50');
+                userInput.placeholder = "Just vent here, I'm listening without judgment...";
+            } else {
+                ventBtn.classList.add('hidden');
+                document.querySelector('#chat-container').classList.remove('bg-gray-700/50');
+                userInput.placeholder = "Ask MindMate anything...";
+            }
+        }
+
+        function saveGoal() {
+            saveState();
+            addMessage("system", `Your goal has been saved: "${goalInput.value}".`);
         }
 
         function handleInput(event) {
@@ -228,40 +720,77 @@
             }
         }
 
-        // Chat Messaging Logic
+        function displayPlaylist(service) {
+            const moodMap = {
+                "😊 Happy": "upbeat",
+                "😔 Sad": "calming",
+                "😨 Anxious": "lo-fi focus",
+                "😡 Angry": "aggressive rock",
+                "😐 Neutral": "study beats",
+                "😟 Stressed": "relaxing instrumental",
+            };
+            const searchTerm = `${moodMap[mood]} playlist`;
+            let url = "";
+            if (service === 'Spotify') {
+                url = `https://open.spotify.com/search/${encodeURIComponent(searchTerm)}`;
+            } else if (service === 'YouTube') {
+                url = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
+            }
+            window.open(url, '_blank');
+        }
+
+        // --- Core Chat Logic ---
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
 
-            // Update streak on a new message
             updateStreak();
-
-            // Clear tip and crisis cards
+            
             tipCard.classList.add('hidden');
             crisisCard.classList.add('hidden');
+
+            const autoMood = getSentiment(text);
+            selectMood(autoMood);
+            saveMoodEntry(autoMood);
             
-            // Add user message to UI
             addMessage("user", text);
             userInput.value = '';
+            
+            // Start the break timer
+            startBreakTimer();
 
-            // Check for crisis keywords
             const isCrisis = CRISIS_PATTERNS.some(pattern => pattern.test(text));
             if (isCrisis) {
                 displayCrisisResources();
             }
             
-            // AI message placeholder
             const placeholder = addMessage("assistant", "...");
             
-            // Build AI prompt
-            const prompt = `MOOD: ${mood}. User says: ${text}. Instructions for the assistant: respond as a calm, empathetic peer. Offer one short supportive reflection, one coping suggestion, and one resource/action the user can take next.`;
-            const systemInstruction = {
-                parts: [{ text: isCrisis ? `${SYSTEM_PROMPT} \n\nNOTE: The user may be in crisis. Prioritize calm, supportive language and encourage seeking immediate help. Do NOT provide instructions for self-harm.` : SYSTEM_PROMPT }]
-            };
+            let currentSystemPrompt = BASE_SYSTEM_PROMPT;
+            const selectedPersona = PERSONAS[personaSelector.value];
+            
+            currentSystemPrompt += `\n\n- PERSONA: Adopt the persona of a ${selectedPersona.name}. ${selectedPersona.prompt}`;
+            
+            const userGoal = localStorage.getItem('userGoal');
+            if (userGoal) {
+                currentSystemPrompt += `\n\n- USER'S GOAL: The user's personal goal is "${userGoal}". Integrate this goal into your motivational responses when appropriate.`;
+            }
 
+            if (ventingMode) {
+                currentSystemPrompt = `
+                    You are a compassionate, non-judgmental space for the user to vent. Your only job is to listen and acknowledge their raw emotions without trying to fix anything. Use very brief, validating responses. For example, "I hear you," or "That sounds really tough." Do not offer advice unless explicitly asked.
+                    `;
+            } else if (isCrisis) {
+                 currentSystemPrompt = `
+                    You are MindMate, a compassionate listener. The user may be in severe distress. Your top priority is to validate their feelings gently and provide immediate, stigma-free support resources without alarm. Do not provide instructions for self-harm or attempt to 'fix' their problem.
+                    `;
+            }
+            
             const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                systemInstruction: systemInstruction,
+                contents: [{ parts: [{ text: text }] }],
+                systemInstruction: {
+                    parts: [{ text: currentSystemPrompt }]
+                },
             };
 
             try {
@@ -280,39 +809,69 @@
                 const result = await response.json();
                 const aiResponse = result.candidates[0].content.parts[0].text;
                 
-                // Update placeholder with full response
                 updateMessage(placeholder, aiResponse);
-
-                // Show a quick tip based on the selected mood
                 displayQuickTip();
+                chatHistory.push({ role: 'user', content: text });
+                chatHistory.push({ role: 'assistant', content: aiResponse });
+                localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
 
             } catch (error) {
                 updateMessage(placeholder, "I'm sorry, I'm having trouble connecting right now. Please try again later.");
                 console.error("Fetch error:", error);
             }
         }
+        
+        // --- Smart Break Reminders ---
+        function startBreakTimer() {
+            if (chatTimer) clearTimeout(chatTimer);
+            chatTimer = setTimeout(() => {
+                const text = "You've been chatting for a while. Would you like to try a 1-minute breathing break?";
+                addMessage('system', text);
+            }, 5 * 60 * 1000); // 5 minutes
+        }
 
         function addMessage(role, text) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            const avatarEmoji = role === 'user' ? '👤' : AVATARS[localStorage.getItem('buddyAvatar') || 'robot'];
+            const avatar = `<div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold">${avatarEmoji}</div>`;
+            const messageContent = role === 'user' ? text : text.replace(/\n/g, '<br>');
             messageDiv.innerHTML = `
                 <div class="flex items-start gap-3 max-w-[75%]">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full ${role === 'user' ? 'bg-blue-600' : 'bg-gray-700'} flex items-center justify-center text-xs font-semibold">
-                        ${role === 'user' ? 'You' : 'AI'}
-                    </div>
+                    ${role === 'user' ? '' : avatar}
                     <div class="bg-gray-700 rounded-xl p-4 text-sm break-words whitespace-pre-wrap">
-                        ${text}
+                        ${messageContent}
                     </div>
+                    ${role === 'user' ? avatar : ''}
                 </div>
             `;
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            return messageDiv.querySelector('div:last-child'); // return the message bubble for updates
+            return messageDiv.querySelector('div:last-child');
         }
 
         function updateMessage(element, newText) {
-            element.innerHTML = newText;
+            element.innerHTML = newText.replace(/\n/g, '<br>');
             chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function displayInitialMessage() {
+            const initialPrompt = "Hi there. I'm MindMate, a safe space to talk. How can I support you today?";
+            addMessage("assistant", initialPrompt);
+        }
+
+        function displayDailyAffirmation() {
+            const today = new Date().toDateString();
+            const storedAffirmationDate = localStorage.getItem('affirmationDate');
+            let currentAffirmation = localStorage.getItem('dailyAffirmation');
+            
+            if (storedAffirmationDate !== today || !currentAffirmation) {
+                const randomIndex = Math.floor(Math.random() * AFFIRMATIONS.length);
+                currentAffirmation = AFFIRMATIONS[randomIndex];
+                localStorage.setItem('affirmationDate', today);
+                localStorage.setItem('dailyAffirmation', currentAffirmation);
+            }
+            dailyAffirmation.textContent = currentAffirmation;
         }
 
         function displayQuickTip() {
@@ -328,10 +887,203 @@
                 let text = `${h.country} - ${h.service}`;
                 if (h.number) text += ` - Call: ${h.number}`;
                 if (h.url) text += ` - <a href="${h.url}" class="underline text-blue-400" target="_blank">Website</a>`;
-                return text;
-            }).join('<br>');
+                return `<div class="p-2 bg-red-700/50 rounded-lg mt-2">${text}</div>`;
+            }).join('');
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
+        
+        function changeAvatar(avatar) {
+            localStorage.setItem('buddyAvatar', avatar);
+            addMessage("system", `Your MindMate avatar is now a ${avatar}.`);
+        }
+
+        // --- Voice Input/Output ---
+        function toggleVoiceInput() {
+            if (isListening) {
+                recognition.stop();
+                isListening = false;
+                voiceInputBtn.classList.remove('bg-red-500');
+            } else {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+                recognition.continuous = false;
+
+                let finalTranscript = '';
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    userInput.value = finalTranscript + interimTranscript;
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    voiceInputBtn.classList.remove('bg-red-500');
+                    if (userInput.value.trim() !== '') {
+                        sendMessage();
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    isListening = false;
+                    voiceInputBtn.classList.remove('bg-red-500');
+                };
+
+                recognition.start();
+                isListening = true;
+                voiceInputBtn.classList.add('bg-red-500');
+            }
+        }
+        
+        // --- Breathing Exercise ---
+        function startBreathingExercise() {
+            breathingModal.classList.remove('hidden');
+            breathingModal.classList.add('flex');
+            let cycle = 0;
+            let breathingCount = 0;
+            const breathingInterval = setInterval(() => {
+                cycle = (cycle + 1) % 4;
+                switch (cycle) {
+                    case 0:
+                        breathingCircle.style.transform = 'scale(1)';
+                        breathingText.textContent = 'Hold';
+                        break;
+                    case 1:
+                        breathingCircle.style.transform = 'scale(1.2)';
+                        breathingText.textContent = 'Breathe In';
+                        break;
+                    case 2:
+                        breathingCircle.style.transform = 'scale(1.2)';
+                        breathingText.textContent = 'Hold';
+                        break;
+                    case 3:
+                        breathingCircle.style.transform = 'scale(1)';
+                        breathingText.textContent = 'Breathe Out';
+                        breathingCount++;
+                        if (breathingCount >= 5) {
+                            grantBadge('breathing_5');
+                        }
+                        break;
+                }
+            }, 4000); // 4 seconds for each step (breathing, holding)
+            window.breathingInterval = breathingInterval;
+        }
+        
+        function stopBreathingExercise() {
+            clearInterval(window.breathingInterval);
+            breathingModal.classList.add('hidden');
+        }
+
+        // --- Mood Chart ---
+        function showMoodChart() {
+            moodChartModal.classList.remove('hidden');
+            moodChartModal.classList.add('flex');
+            const moodJournal = JSON.parse(localStorage.getItem('moodJournal') || '{}');
+            const dates = Object.keys(moodJournal).slice(-7).sort();
+            const scores = dates.map(date => MOOD_SCORES[moodJournal[date]] || 3);
+            
+            const labels = dates.map(date => new Date(date).toLocaleDateString());
+            const data = {
+                labels: labels,
+                datasets: [{
+                    label: 'Mood Score',
+                    backgroundColor: 'rgb(59, 130, 246)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    data: scores,
+                }]
+            };
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false }, title: { display: true, text: 'Weekly Mood Progression', color: '#e0e0e0' } },
+                    scales: {
+                        y: { beginAtZero: true, max: 5, ticks: { callback: (value) => {
+                            const moodLabels = { 1: 'Bad', 2: 'So-so', 3: 'Neutral', 4: 'Good', 5: 'Great' };
+                            return moodLabels[value] || '';
+                        }, color: '#94a3b8' }, grid: { color: '#4a5568' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#4a5568' } }
+                    }
+                }
+            };
+
+            const chartCanvas = document.getElementById('mood-chart');
+            if (myChart) { myChart.destroy(); }
+            myChart = new Chart(chartCanvas, config);
+        }
+
+        function closeMoodChart() {
+            moodChartModal.classList.add('hidden');
+            if (myChart) { myChart.destroy(); }
+        }
+
+        // --- AI Summary & Coping Plan ---
+        async function generateSummary() {
+            addMessage('assistant', 'Generating your weekly reflection...');
+            const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+            const summaryPrompt = `Based on the following chat history from the past week, provide a short summary of the user's emotional trends, key discussion topics, and any notable progress or challenges. Also, offer one key insight.
+                Chat History: ${JSON.stringify(history.slice(-20))}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: summaryPrompt }] }]
+            };
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const summary = result.candidates[0].content.parts[0].text;
+                addMessage('assistant', `**Weekly Reflection:**<br>${summary}`);
+            } catch (error) {
+                addMessage('assistant', 'Sorry, I could not generate the summary.');
+            }
+        }
+
+        async function generateCopingPlan() {
+            addMessage('assistant', 'Generating a personalized coping plan...');
+            const planPrompt = `Based on the current mood '${mood}' and the last user message, create a simple, step-by-step coping plan. Structure it as a list of 3 actionable steps.
+                User Message: ${userInput.value.trim()}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: planPrompt }] }]
+            };
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const plan = result.candidates[0].content.parts[0].text;
+                addMessage('assistant', `**Your Custom Coping Plan:**<br>${plan}`);
+            } catch (error) {
+                addMessage('assistant', 'Sorry, I could not generate a coping plan right now.');
+            }
+        }
+
+        // --- Sharing Functionality ---
+        function shareProgress() {
+            const card = document.getElementById('shareable-card');
+            html2canvas(card, { backgroundColor: '#111827', scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'mindmate_progress.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+        
     </script>
 </body>
 </html>
