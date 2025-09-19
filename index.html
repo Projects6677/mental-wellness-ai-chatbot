@@ -72,6 +72,25 @@
             font-size: 2rem;
             line-height: 1;
         }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background-color: #1f2937;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 600px;
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden bg-gray-900 text-white">
@@ -119,7 +138,7 @@
                     </div>
                 </div>
                 <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="showJournalVault()">Journaling Vault</button>
-                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="startBreathingExercise()">Breathing Guide</button>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="startGuidedMeditation()">Guided Meditation</button>
             </div>
             
             <!-- Mood Calendar & Streak -->
@@ -155,7 +174,9 @@
             <div class="mt-4 flex-shrink-0 border-b border-gray-700 pb-4">
                 <div class="text-sm text-gray-400 font-semibold mb-2">Daily Affirmation</div>
                 <div id="daily-affirmation" class="p-2 bg-gray-800 rounded-lg text-sm italic text-gray-300 mb-4"></div>
-
+            </div>
+            
+            <div class="mt-4 flex-shrink-0 border-b border-gray-700 pb-4">
                 <div class="text-sm text-gray-400 font-semibold mb-2">AI Buddy Persona</div>
                 <select id="persona-selector" class="w-full bg-gray-800 rounded-lg p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="calm_listener">Calm Listener</option>
@@ -197,7 +218,14 @@
                     </button>
                 </div>
             </div>
-
+            
+            <!-- Community Board (Simulated) -->
+            <div class="mt-4 flex-shrink-0 pb-4">
+                <div class="text-sm text-gray-400 font-semibold mb-2">Community Board (Simulated)</div>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm" onclick="showCommunityBoard()">
+                    View Board
+                </button>
+            </div>
         </aside>
 
         <!-- Main Chat Area -->
@@ -219,21 +247,23 @@
                 <!-- Chat messages will be dynamically added here -->
             </div>
 
-            <!-- Modal for Breathing Exercise -->
-            <div id="breathing-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 hidden items-center justify-center">
-                <div class="relative w-96 h-96 flex flex-col items-center justify-center">
-                    <div id="breathing-circle" class="w-64 h-64 bg-blue-500 rounded-full transition-all duration-1000 ease-in-out transform"></div>
-                    <p id="breathing-text" class="absolute text-2xl font-bold">Inhale</p>
-                    <button class="absolute bottom-10 bg-gray-700 text-white py-2 px-4 rounded-lg" onclick="stopBreathingExercise()">Stop</button>
+            <!-- Modals -->
+            <!-- Modal for Guided Meditation -->
+            <div id="meditation-modal" class="modal hidden">
+                <div class="modal-content text-center">
+                    <h2 class="text-2xl font-bold mb-4">Guided Meditation</h2>
+                    <p id="meditation-text" class="text-lg mb-4">Click Play to begin.</p>
+                    <button id="meditation-toggle-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">Play</button>
+                    <button class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg ml-2" onclick="closeModal('meditation-modal')">Close</button>
                 </div>
             </div>
 
             <!-- Modal for Mood Chart -->
-            <div id="mood-chart-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 hidden items-center justify-center">
-                <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-1/2">
+            <div id="mood-chart-modal" class="modal hidden">
+                <div class="modal-content">
                     <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
                         <h2 class="text-xl font-semibold">Weekly Mood Trends</h2>
-                        <button class="text-gray-400 hover:text-white" onclick="closeMoodChart()">
+                        <button class="text-gray-400 hover:text-white" onclick="closeModal('mood-chart-modal')">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6L6 18"/><path d="M6 6L18 18"/></svg>
                         </button>
                     </div>
@@ -242,11 +272,11 @@
             </div>
             
             <!-- Modal for Journaling Vault -->
-            <div id="journal-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 hidden items-center justify-center">
-                <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-1/2 flex flex-col h-[80%]">
+            <div id="journal-modal" class="modal hidden">
+                <div class="modal-content flex flex-col max-h-[80vh]">
                     <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
                         <h2 class="text-xl font-semibold">Your Private Journal</h2>
-                        <button class="text-gray-400 hover:text-white" onclick="closeJournalVault()">
+                        <button class="text-gray-400 hover:text-white" onclick="closeModal('journal-modal')">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6L6 18"/><path d="M6 6L18 18"/></svg>
                         </button>
                     </div>
@@ -256,6 +286,26 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Modal for Community Board -->
+            <div id="community-modal" class="modal hidden">
+                <div class="modal-content flex flex-col max-h-[80vh]">
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
+                        <h2 class="text-xl font-semibold">Community Board</h2>
+                        <button class="text-gray-400 hover:text-white" onclick="closeModal('community-modal')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6L6 18"/><path d="M6 6L18 18"/></svg>
+                        </button>
+                    </div>
+                    <div id="community-posts" class="flex-grow overflow-y-auto mb-4 space-y-4">
+                        <!-- Community posts will be rendered here -->
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="community-input" class="flex-grow bg-gray-700 text-white rounded-lg py-2 px-3 focus:outline-none" placeholder="Post an inspiring thought...">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg" onclick="postToCommunity()">Post</button>
+                    </div>
+                </div>
+            </div>
+
 
             <!-- Crisis Detection Card -->
             <div id="crisis-card" class="hidden p-4 mx-6 my-4 bg-red-800 rounded-lg shadow-lg">
@@ -371,6 +421,17 @@
             "You have the power to create a peaceful space within yourself.",
             "Be kind to yourself today. You are doing the best you can."
         ];
+        const GUIDED_MEDITATION_TEXT = [
+            "Welcome. Find a comfortable position. Close your eyes or soften your gaze.",
+            "Take a deep breath in through your nose, filling your lungs completely.",
+            "Hold that breath for a moment, and now, slowly release it through your mouth.",
+            "Again, inhale deeply... and exhale slowly.",
+            "Feel your body relax with each breath. Let go of any tension you might be holding.",
+            "Just for this moment, let your mind be quiet. Focus only on the rhythm of your breath.",
+            "Inhale peace. Exhale stress.",
+            "You are doing a great job. When you are ready, gently open your eyes.",
+            "You can return to this feeling of calm whenever you need it. The meditation is now complete."
+        ];
 
         let chatHistory = [];
         let mood = "😊 Happy";
@@ -399,14 +460,17 @@
         const challengeDaysContainer = document.getElementById('challenge-days');
         const currentChallengeTask = document.getElementById('current-challenge-task');
         const currentDayNum = document.getElementById('current-day-num');
-        const breathingModal = document.getElementById('breathing-modal');
-        const breathingCircle = document.getElementById('breathing-circle');
-        const breathingText = document.getElementById('breathing-text');
+        const meditationModal = document.getElementById('meditation-modal');
+        const meditationText = document.getElementById('meditation-text');
+        const meditationToggleBtn = document.getElementById('meditation-toggle-btn');
         const voiceInputBtn = document.getElementById('voice-input-btn');
         const moodChartModal = document.getElementById('mood-chart-modal');
         const badgeContainer = document.getElementById('badge-container');
         const goalDisplay = document.getElementById('goal-display');
         const dailyAffirmation = document.getElementById('daily-affirmation');
+        const communityPostsContainer = document.getElementById('community-posts');
+        const communityInput = document.getElementById('community-input');
+
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
@@ -419,6 +483,7 @@
             renderBadges();
             updateGoalDisplay();
             displayDailyAffirmation();
+            renderCommunityPosts();
         });
 
         // --- Core Functions ---
@@ -607,23 +672,8 @@
             const journalEntry = document.getElementById('journal-entry');
             const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]').map(entry => atob(entry));
             journalEntry.value = entries.join('\n\n---\n\n');
-            vault.classList.remove('hidden');
-            vault.classList.add('flex');
+            openModal('journal-modal');
             grantBadge('first_journal');
-        }
-
-        function closeJournalVault() {
-            const vault = document.getElementById('journal-modal');
-            vault.classList.add('hidden');
-            vault.classList.remove('flex');
-        }
-
-        function saveJournalEntry() {
-            const journalEntry = document.getElementById('journal-entry');
-            const entries = journalEntry.value.split('\n\n---\n\n').map(entry => btoa(entry));
-            localStorage.setItem('journalEntries', JSON.stringify(entries));
-            addMessage("system", "Your journal entry has been saved securely.");
-            closeJournalVault();
         }
 
         // --- Wellness Challenges ---
@@ -814,6 +864,12 @@
                 chatHistory.push({ role: 'user', content: text });
                 chatHistory.push({ role: 'assistant', content: aiResponse });
                 localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                generateAffirmation();
+                
+                // Add a gentle prompt for breathing exercise based on mood
+                if (autoMood === '😨 Anxious' || autoMood === '😟 Stressed' || autoMood === '😔 Sad') {
+                    addMessage('system', "I sense you might be feeling a bit overwhelmed. Would you like to try a 1-minute guided breathing exercise?");
+                }
 
             } catch (error) {
                 updateMessage(placeholder, "I'm sorry, I'm having trouble connecting right now. Please try again later.");
@@ -860,18 +916,45 @@
             addMessage("assistant", initialPrompt);
         }
 
-        function displayDailyAffirmation() {
-            const today = new Date().toDateString();
+        // --- AI-Powered Affirmations ---
+        async function generateAffirmation() {
             const storedAffirmationDate = localStorage.getItem('affirmationDate');
-            let currentAffirmation = localStorage.getItem('dailyAffirmation');
+            const today = new Date().toDateString();
             
-            if (storedAffirmationDate !== today || !currentAffirmation) {
-                const randomIndex = Math.floor(Math.random() * AFFIRMATIONS.length);
-                currentAffirmation = AFFIRMATIONS[randomIndex];
-                localStorage.setItem('affirmationDate', today);
-                localStorage.setItem('dailyAffirmation', currentAffirmation);
+            // Only generate a new affirmation once per day
+            if (storedAffirmationDate === today) {
+                dailyAffirmation.textContent = localStorage.getItem('dailyAffirmation');
+                return;
             }
-            dailyAffirmation.textContent = currentAffirmation;
+
+            const goal = localStorage.getItem('userGoal') || "improving mental wellness";
+            const moodPrompt = `Generate a short, positive affirmation for a user who is currently feeling ${mood.split(' ')[1]} and is working towards the goal of "${goal}".`;
+            const payload = {
+                contents: [{ parts: [{ text: moodPrompt }] }]
+            };
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const newAffirmation = result.candidates[0].content.parts[0].text;
+                dailyAffirmation.textContent = newAffirmation;
+                localStorage.setItem('dailyAffirmation', newAffirmation);
+                localStorage.setItem('affirmationDate', today);
+            } catch (error) {
+                // Fallback to a random static affirmation
+                const randomIndex = Math.floor(Math.random() * AFFIRMATIONS.length);
+                const staticAffirmation = AFFIRMATIONS[randomIndex];
+                dailyAffirmation.textContent = staticAffirmation;
+                localStorage.setItem('dailyAffirmation', staticAffirmation);
+                localStorage.setItem('affirmationDate', today);
+            }
+        }
+        function displayDailyAffirmation() {
+            generateAffirmation();
         }
 
         function displayQuickTip() {
@@ -942,49 +1025,112 @@
             }
         }
         
-        // --- Breathing Exercise ---
-        function startBreathingExercise() {
-            breathingModal.classList.remove('hidden');
-            breathingModal.classList.add('flex');
-            let cycle = 0;
-            let breathingCount = 0;
-            const breathingInterval = setInterval(() => {
-                cycle = (cycle + 1) % 4;
-                switch (cycle) {
-                    case 0:
-                        breathingCircle.style.transform = 'scale(1)';
-                        breathingText.textContent = 'Hold';
-                        break;
-                    case 1:
-                        breathingCircle.style.transform = 'scale(1.2)';
-                        breathingText.textContent = 'Breathe In';
-                        break;
-                    case 2:
-                        breathingCircle.style.transform = 'scale(1.2)';
-                        breathingText.textContent = 'Hold';
-                        break;
-                    case 3:
-                        breathingCircle.style.transform = 'scale(1)';
-                        breathingText.textContent = 'Breathe Out';
-                        breathingCount++;
-                        if (breathingCount >= 5) {
-                            grantBadge('breathing_5');
-                        }
-                        break;
+        // --- Guided Meditation ---
+        let meditationAudio = new SpeechSynthesisUtterance();
+        let meditationIndex = 0;
+        let meditationIsPlaying = false;
+        
+        function startGuidedMeditation() {
+            openModal('meditation-modal');
+            meditationText.textContent = GUIDED_MEDITATION_TEXT[0];
+            meditationToggleBtn.textContent = 'Play';
+            meditationToggleBtn.onclick = toggleMeditation;
+            meditationIndex = 0;
+        }
+
+        function toggleMeditation() {
+            if (meditationIsPlaying) {
+                synthesis.pause();
+                meditationIsPlaying = false;
+                meditationToggleBtn.textContent = 'Resume';
+            } else {
+                synthesis.resume();
+                meditationIsPlaying = true;
+                meditationToggleBtn.textContent = 'Pause';
+                if (meditationIndex === 0) {
+                    playMeditationStep();
                 }
-            }, 4000); // 4 seconds for each step (breathing, holding)
-            window.breathingInterval = breathingInterval;
+            }
         }
         
-        function stopBreathingExercise() {
-            clearInterval(window.breathingInterval);
-            breathingModal.classList.add('hidden');
+        function playMeditationStep() {
+            if (meditationIndex >= GUIDED_MEDITATION_TEXT.length) {
+                meditationIsPlaying = false;
+                meditationToggleBtn.textContent = 'Done';
+                grantBadge('breathing_5');
+                return;
+            }
+            meditationAudio.text = GUIDED_MEDITATION_TEXT[meditationIndex];
+            meditationText.textContent = GUIDED_MEDITATION_TEXT[meditationIndex];
+            synthesis.speak(meditationAudio);
+            meditationAudio.onend = () => {
+                meditationIndex++;
+                setTimeout(playMeditationStep, 2000); // 2 second pause between steps
+            };
+        }
+        
+        function saveJournalEntry() {
+            const journalEntry = document.getElementById('journal-entry');
+            if (journalEntry.value.trim() === "") {
+                closeModal('journal-modal');
+                return;
+            }
+            const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]').map(entry => atob(entry));
+            const newEntry = btoa(journalEntry.value);
+            entries.push(newEntry);
+            localStorage.setItem('journalEntries', JSON.stringify(entries));
+            addMessage("system", "Your journal entry has been saved securely.");
+            closeModal('journal-modal');
+        }
+
+        // --- Community Board ---
+        function showCommunityBoard() {
+            openModal('community-modal');
+            renderCommunityPosts();
+        }
+
+        function renderCommunityPosts() {
+            const posts = JSON.parse(localStorage.getItem('communityPosts') || '[]');
+            communityPostsContainer.innerHTML = '';
+            if (posts.length === 0) {
+                communityPostsContainer.innerHTML = `<p class="text-gray-500 italic">No posts yet. Be the first to share something!</p>`;
+            }
+            posts.forEach(post => {
+                const postDiv = document.createElement('div');
+                postDiv.className = 'bg-gray-700 p-3 rounded-lg text-sm';
+                postDiv.innerHTML = `<p class="text-blue-300 font-semibold mb-1">${post.author}</p><p>${post.content}</p><p class="text-xs text-gray-400 mt-2">${new Date(post.timestamp).toLocaleString()}</p>`;
+                communityPostsContainer.prepend(postDiv);
+            });
+        }
+        
+        function postToCommunity() {
+            const content = communityInput.value.trim();
+            if (content === "") return;
+            const posts = JSON.parse(localStorage.getItem('communityPosts') || '[]');
+            const newPost = {
+                author: "Anonymous",
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+            posts.push(newPost);
+            localStorage.setItem('communityPosts', JSON.stringify(posts));
+            communityInput.value = '';
+            renderCommunityPosts();
+        }
+
+        // --- Modals ---
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('flex');
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
         }
 
         // --- Mood Chart ---
         function showMoodChart() {
-            moodChartModal.classList.remove('hidden');
-            moodChartModal.classList.add('flex');
+            openModal('mood-chart-modal');
             const moodJournal = JSON.parse(localStorage.getItem('moodJournal') || '{}');
             const dates = Object.keys(moodJournal).slice(-7).sort();
             const scores = dates.map(date => MOOD_SCORES[moodJournal[date]] || 3);
@@ -1020,17 +1166,15 @@
             myChart = new Chart(chartCanvas, config);
         }
 
-        function closeMoodChart() {
-            moodChartModal.classList.add('hidden');
-            if (myChart) { myChart.destroy(); }
-        }
-
         // --- AI Summary & Coping Plan ---
         async function generateSummary() {
             addMessage('assistant', 'Generating your weekly reflection...');
             const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-            const summaryPrompt = `Based on the following chat history from the past week, provide a short summary of the user's emotional trends, key discussion topics, and any notable progress or challenges. Also, offer one key insight.
-                Chat History: ${JSON.stringify(history.slice(-20))}`;
+            const journalEntries = JSON.parse(localStorage.getItem('journalEntries') || '[]').map(entry => atob(entry));
+            const combinedHistory = history.map(item => `[${item.role}]: ${item.content}`).join('\n') + `\n\n[Journal Entries]:\n${journalEntries.join('\n')}`;
+
+            const summaryPrompt = `Based on the following chat history and journal entries, provide a short summary of the user's emotional trends, key discussion topics, and any notable progress or challenges. Also, offer one key insight.
+                History: ${combinedHistory.slice(-2000)}`;
             
             const payload = {
                 contents: [{ parts: [{ text: summaryPrompt }] }]
