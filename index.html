@@ -339,9 +339,8 @@
 
     <script>
         // Data and Configuration
-        // IMPORTANT: Replace the empty string below with your actual API key.
-        // DO NOT share your API key publicly.
-        const API_KEY = "";
+        // IMPORTANT: Paste your actual API key below, replacing the empty string.
+        const API_KEY = ""; 
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
         const BASE_SYSTEM_PROMPT = `
             You are MindMate, a compassionate, non-judgmental conversational assistant. Your job is to listen actively, reflect feelings, validate the user's experience, and offer short, practical coping strategies or resources.
@@ -471,9 +470,12 @@
         const communityPostsContainer = document.getElementById('community-posts');
         const communityInput = document.getElementById('community-input');
 
-
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+        });
+        
+        function initializeApp() {
             loadState();
             updateStreak();
             updateMoodCalendar();
@@ -484,7 +486,7 @@
             updateGoalDisplay();
             displayDailyAffirmation();
             renderCommunityPosts();
-        });
+        }
 
         // --- Core Functions ---
         function loadState() {
@@ -507,7 +509,7 @@
                 goalDisplay.textContent = "Not set";
             }
         }
-
+        
         function clearSession() {
             localStorage.clear();
             chatHistory = [];
