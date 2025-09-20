@@ -12,12 +12,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-color: #1a1a1a;
+        }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1a1a1a;
+            background-color: var(--bg-color);
             color: #e0e0e0;
             margin: 0;
             padding: 0;
+            transition: background-color 0.5s ease;
         }
         .chat-container {
             height: calc(100vh - 8rem);
@@ -62,8 +66,8 @@
             border-radius: 4px;
         }
         @keyframes pulse-breathing {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
         }
         .animate-pulse-breathing {
             animation: pulse-breathing 4s infinite ease-in-out;
@@ -118,27 +122,28 @@
             <div class="flex-shrink-0 pb-4 border-b border-gray-700">
                 <div class="text-sm text-gray-400 font-semibold mb-2">Mood Check-in</div>
                 <div class="space-y-2 mb-4" id="mood-selector">
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700 transition-colors">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700 transition-colors" data-mood="😊 Happy">
                         <span class="text-2xl mr-2">😊</span> Happy
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors" data-mood="😔 Sad">
                         <span class="text-2xl mr-2">😔</span> Sad
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors" data-mood="😨 Anxious">
                         <span class="text-2xl mr-2">😨</span> Anxious
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors" data-mood="😡 Angry">
                         <span class="text-2xl mr-2">😡</span> Angry
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors" data-mood="😐 Neutral">
                         <span class="text-2xl mr-2">😐</span> Neutral
                     </div>
-                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                    <div class="mood-option flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors" data-mood="😟 Stressed">
                         <span class="text-2xl mr-2">😟</span> Stressed
                     </div>
                 </div>
                 <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="showJournalVault()">Journaling Vault</button>
-                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="startGuidedMeditation()">Guided Meditation</button>
+                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="startGuidedBreathing()">Breathing Exercise</button>
+                <button class="w-full bg-red-700 hover:bg-red-600 text-white py-1 px-4 rounded-lg text-sm mb-2" onclick="showSosPlan()">Quick SOS Plan</button>
             </div>
             
             <!-- Mood Calendar & Streak -->
@@ -239,6 +244,7 @@
                     </button>
                     <button class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-1 px-3 rounded-full transition-colors" onclick="toggleVentingMode()">Start Venting</button>
                     <button id="vent-btn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded-full transition-colors hidden" onclick="toggleVentingMode()">Venting Mode: On</button>
+                    <button id="stop-speaking-btn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded-full transition-colors" onclick="stopSpeaking()">Stop Speaking</button>
                 </div>
             </header>
             
@@ -246,6 +252,12 @@
             <div id="chat-container" class="chat-container flex flex-col p-6 space-y-4 flex-grow overflow-y-auto">
                 <!-- Chat messages will be dynamically added here -->
             </div>
+
+            <!-- Floating Button -->
+            <button id="floating-btn" class="fixed bottom-24 right-6 w-12 h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-50" onclick="getMotivationalQuote()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </button>
+
 
             <!-- Modals -->
             <!-- Modal for Guided Meditation -->
@@ -286,6 +298,31 @@
                     </div>
                 </div>
             </div>
+
+            <!-- PIN Lock Modal -->
+            <div id="pin-modal" class="modal hidden">
+                <div class="modal-content text-center">
+                    <h2 class="text-2xl font-bold mb-4">Enter PIN</h2>
+                    <input type="password" id="pin-input" class="w-48 bg-gray-800 text-white rounded-lg p-2 text-xl tracking-[1rem] text-center focus:outline-none focus:ring-2 focus:ring-blue-500" maxlength="4">
+                    <div class="mt-4 flex justify-center space-x-2">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg" onclick="checkPin()">Enter</button>
+                        <button class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg" onclick="closeModal('pin-modal')">Cancel</button>
+                    </div>
+                    <div id="pin-error" class="text-red-400 mt-2 hidden">Incorrect PIN. Try again.</div>
+                </div>
+            </div>
+
+            <!-- Set PIN Modal -->
+            <div id="set-pin-modal" class="modal hidden">
+                <div class="modal-content text-center">
+                    <h2 class="text-2xl font-bold mb-4">Set a 4-Digit PIN</h2>
+                    <input type="password" id="set-pin-input" class="w-48 bg-gray-800 text-white rounded-lg p-2 text-xl tracking-[1rem] text-center focus:outline-none focus:ring-2 focus:ring-blue-500" maxlength="4">
+                    <div class="mt-4 flex justify-center space-x-2">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg" onclick="setPin()">Set</button>
+                        <button class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg" onclick="closeModal('set-pin-modal')">Cancel</button>
+                    </div>
+                </div>
+            </div>
             
             <!-- Modal for Community Board -->
             <div id="community-modal" class="modal hidden">
@@ -306,11 +343,27 @@
                 </div>
             </div>
 
+            <!-- SOS Plan Modal -->
+            <div id="sos-modal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
+                        <h2 class="text-xl font-semibold">Your Quick SOS Plan</h2>
+                        <button class="text-gray-400 hover:text-white" onclick="closeModal('sos-modal')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6L6 18"/><path d="M6 6L18 18"/></svg>
+                        </button>
+                    </div>
+                    <textarea id="sos-plan-input" class="w-full h-40 bg-gray-700 rounded-lg text-white p-4 resize-none" placeholder="Write down your coping steps here. e.g., Call a friend, take a walk, listen to music..."></textarea>
+                    <div class="mt-4 flex justify-end space-x-2">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg" onclick="saveSosPlan()">Save Plan</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Crisis Detection Card -->
             <div id="crisis-card" class="hidden p-4 mx-6 my-4 bg-red-800 rounded-lg shadow-lg">
                 <p class="text-lg font-semibold mb-2">⚠️ Immediate Help Needed</p>
                 <p class="text-sm">I detect language suggesting severe distress. If you are in immediate danger, please reach out to the resources below. You are not alone.</p>
+                <div id="sos-plan-display" class="mt-4 text-xs font-medium bg-red-700 p-2 rounded-lg italic hidden"></div>
                 <div id="crisis-resources" class="mt-4 text-xs font-medium"></div>
             </div>
 
@@ -318,12 +371,23 @@
             <div id="tip-card" class="hidden p-4 mx-6 my-4 bg-blue-800 rounded-lg shadow-lg">
                 <p class="text-lg font-semibold mb-2">🌱 Quick Tip</p>
                 <p class="text-sm" id="tip-content"></p>
-                <div class="flex space-x-2 mt-2">
-                    <button class="text-sm text-blue-200 underline" onclick="displayPlaylist('Spotify')">Spotify Playlist</button>
-                    <button class="text-sm text-blue-200 underline" onclick="displayPlaylist('YouTube')">YouTube Playlist</button>
-                    <button class="text-sm text-blue-200 underline" onclick="generateCopingPlan()">Get Coping Plan</button>
+                <div class="flex flex-col space-y-2 mt-2" id="playlist-container">
+                    <p class="text-sm text-blue-200">Loading playlist...</p>
                 </div>
             </div>
+            
+            <!-- Breathing Exercise Modal -->
+            <div id="breathing-modal" class="modal hidden">
+                <div class="modal-content text-center">
+                    <h2 class="text-2xl font-bold mb-4">Mindful Breathing</h2>
+                    <div id="breathing-circle-container" class="flex justify-center items-center h-48">
+                        <div id="breathing-circle" class="w-24 h-24 bg-blue-500 rounded-full animate-pulse-breathing"></div>
+                    </div>
+                    <div id="breathing-text" class="text-xl font-bold mt-4">Breathe In...</div>
+                    <button class="mt-6 bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg" onclick="stopBreathing()">Stop</button>
+                </div>
+            </div>
+
 
             <!-- Chat Input Area -->
             <div class="p-4 flex-shrink-0 bg-gray-900 border-t border-gray-700">
@@ -339,7 +403,7 @@
 
     <script>
         // Data and Configuration
-        // IMPORTANT: Paste your actual API key below, replacing the empty string.
+        // IMPORTANT: Paste your actual API key below.
         const API_KEY = "AIzaSyBpqaidvMZFtPslwJO75hBfz2GDaKcjnUY"; 
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
         const BASE_SYSTEM_PROMPT = `
@@ -369,12 +433,12 @@
         };
         const MOODS = ["😊 Happy", "😔 Sad", "😨 Anxious", "😡 Angry", "😐 Neutral", "😟 Stressed"];
         const MOOD_COLORS = {
-            "😊 Happy": "#22c55e",
-            "😔 Sad": "#60a5fa",
-            "😨 Anxious": "#f97316",
-            "😡 Angry": "#ef4444",
-            "😐 Neutral": "#94a3b8",
-            "😟 Stressed": "#facc15",
+            "😊 Happy": "rgb(34, 197, 94)",
+            "😔 Sad": "rgb(96, 165, 250)",
+            "😨 Anxious": "rgb(249, 115, 22)",
+            "😡 Angry": "rgb(239, 68, 68)",
+            "😐 Neutral": "rgb(148, 163, 184)",
+            "😟 Stressed": "rgb(250, 204, 21)",
         };
         const MOOD_SCORES = {
             "😊 Happy": 5, "😔 Sad": 1, "😨 Anxious": 2, "😡 Angry": 1, "😐 Neutral": 3, "😟 Stressed": 2,
@@ -431,6 +495,21 @@
             "You are doing a great job. When you are ready, gently open your eyes.",
             "You can return to this feeling of calm whenever you need it. The meditation is now complete."
         ];
+        const COGNITIVE_DISTORTIONS = {
+             "i'm a failure": "That's a tough thought to have. While you might feel like a failure, remember that one setback doesn't define your entire worth. What's one small step you can take forward today?",
+             "i always mess up": "It's easy to focus on mistakes, but think about all the times you've succeeded. It's not a matter of 'always' messing up, but rather, learning from moments that didn't go as planned.",
+             "no one likes me": "It's painful to feel alone. But remember, the way you see yourself isn't always how others see you. There are people who care about you. What's one way you can connect with someone today?",
+             "it's hopeless": "I know it feels hopeless right now, but that's a feeling, not a fact. Small changes can create big shifts over time. What's the tiniest possible action you could take right now to move forward?",
+        };
+        const MOOD_PLAYLISTS = {
+            "😊 Happy": "https://www.youtube.com/embed/videoseries?list=PL_XqGkYnK1uP7Wf5yY_X-a3v3zB_Pq6jO",
+            "😔 Sad": "https://www.youtube.com/embed/videoseries?list=PL_XqGkYnK1uPEr25K-z73c3wQpP9hY9yY",
+            "😨 Anxious": "https://www.youtube.com/embed/videoseries?list=PL_XqGkYnK1uM2yD_g-2q2e-7iP5x_P-zV",
+            "😡 Angry": "https://www.youtube.com/embed/videoseries?list=PL_XqGkYnK1uO-G-X-v86i_J-7jY_g-R-Y",
+            "😐 Neutral": "https://www.youtube.com/embed/videoseries?list=PL_XqGkYnK1uN5c5wF-2w3g-j-3j_1y-3j",
+            "😟 Stressed": "https://www.youtube.com/embed/videoseries?list=PL_XqGkYnK1uP8h5g-y-2c-7i-j-1a-5c",
+        };
+
 
         let chatHistory = [];
         let mood = "😊 Happy";
@@ -441,6 +520,8 @@
         let currentCalendarDate = new Date();
         let myChart = null;
         let chatTimer = null;
+        let pin = null;
+        let breathingTimer = null;
         
         // UI Elements
         const chatContainer = document.getElementById('chat-container');
@@ -469,6 +550,18 @@
         const dailyAffirmation = document.getElementById('daily-affirmation');
         const communityPostsContainer = document.getElementById('community-posts');
         const communityInput = document.getElementById('community-input');
+        const sendBtn = document.getElementById('send-btn');
+        const stopSpeakingBtn = document.getElementById('stop-speaking-btn');
+        const sosPlanInput = document.getElementById('sos-plan-input');
+        const sosPlanDisplay = document.getElementById('sos-plan-display');
+        const breathingModal = document.getElementById('breathing-modal');
+        const breathingCircle = document.getElementById('breathing-circle');
+        const breathingText = document.getElementById('breathing-text');
+        const pinModal = document.getElementById('pin-modal');
+        const pinInput = document.getElementById('pin-input');
+        const pinError = document.getElementById('pin-error');
+        const setPinModal = document.getElementById('set-pin-modal');
+        const setPinInput = document.getElementById('set-pin-input');
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
@@ -670,12 +763,54 @@
 
         // --- Journaling Vault ---
         function showJournalVault() {
-            const vault = document.getElementById('journal-modal');
-            const journalEntry = document.getElementById('journal-entry');
-            const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]').map(entry => atob(entry));
-            journalEntry.value = entries.join('\n\n---\n\n');
-            openModal('journal-modal');
+            const storedPin = localStorage.getItem('journalPin');
+            if (storedPin) {
+                openModal('pin-modal');
+            } else {
+                openModal('set-pin-modal');
+            }
             grantBadge('first_journal');
+        }
+
+        function checkPin() {
+            const storedPin = localStorage.getItem('journalPin');
+            const inputPin = setPinInput.value;
+            if (inputPin === storedPin) {
+                 const journalEntry = document.getElementById('journal-entry');
+                 const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]').map(entry => atob(entry));
+                 journalEntry.value = entries.join('\n\n---\n\n');
+                 closeModal('pin-modal');
+                 openModal('journal-modal');
+                 pinInput.value = '';
+            } else {
+                pinError.classList.remove('hidden');
+            }
+        }
+
+        function setPin() {
+            const newPin = setPinInput.value;
+            if (newPin.length === 4) {
+                localStorage.setItem('journalPin', newPin);
+                addMessage("system", "PIN for your journal has been set!");
+                closeModal('set-pin-modal');
+                showJournalVault();
+            } else {
+                // Should show a message to enter 4 digits
+            }
+        }
+        
+        // --- SOS Plan ---
+        function showSosPlan() {
+            const storedPlan = localStorage.getItem('sosPlan') || '';
+            sosPlanInput.value = storedPlan;
+            openModal('sos-modal');
+        }
+
+        function saveSosPlan() {
+            const newPlan = sosPlanInput.value;
+            localStorage.setItem('sosPlan', newPlan);
+            addMessage("system", "Your Quick SOS Plan has been saved!");
+            closeModal('sos-modal');
         }
 
         // --- Wellness Challenges ---
@@ -731,9 +866,10 @@
         // --- UI Interactions ---
         moodOptions.forEach(option => {
             option.addEventListener('click', () => {
-                const selectedMood = option.textContent.trim();
+                const selectedMood = option.dataset.mood;
                 selectMood(selectedMood);
                 saveMoodEntry(selectedMood);
+                document.body.style.setProperty('--bg-color', MOOD_COLORS[selectedMood] || '#1a1a1a');
             });
         });
 
@@ -741,10 +877,11 @@
             mood = selectedMood;
             moodOptions.forEach(option => {
                 option.classList.remove('bg-gray-800');
-                if (option.textContent.trim() === selectedMood) {
+                if (option.dataset.mood === selectedMood) {
                     option.classList.add('bg-gray-800');
                 }
             });
+            document.body.style.setProperty('--bg-color', MOOD_COLORS[selectedMood] || '#1a1a1a');
         }
         
         function toggleVentingMode() {
@@ -772,29 +909,31 @@
             }
         }
 
-        function displayPlaylist(service) {
-            const moodMap = {
-                "😊 Happy": "upbeat",
-                "😔 Sad": "calming",
-                "😨 Anxious": "lo-fi focus",
-                "😡 Angry": "aggressive rock",
-                "😐 Neutral": "study beats",
-                "😟 Stressed": "relaxing instrumental",
-            };
-            const searchTerm = `${moodMap[mood]} playlist`;
-            let url = "";
-            if (service === 'Spotify') {
-                url = `https://open.spotify.com/search/${encodeURIComponent(searchTerm)}`;
-            } else if (service === 'YouTube') {
-                url = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
-            }
-            window.open(url, '_blank');
+        function displayPlaylist() {
+            const playlistContainer = document.getElementById('playlist-container');
+            playlistContainer.innerHTML = '';
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = MOOD_PLAYLISTS[mood];
+            iframe.width = "100%";
+            iframe.height = "250";
+            iframe.setAttribute("allow", "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture");
+            iframe.setAttribute("loading", "lazy");
+            playlistContainer.appendChild(iframe);
         }
 
         // --- Core Chat Logic ---
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
+
+            // Check if API key is a placeholder and provide instructions
+            if (API_KEY === "PASTE_YOUR_API_KEY_HERE") {
+                const placeholder = addMessage("assistant", "...");
+                updateMessage(placeholder, "Please replace 'PASTE_YOUR_API_KEY_HERE' with your actual Google AI Studio API key in the code to enable the chat functionality. You can find this near the top of the script section.");
+                console.error("API key is not set. Please update the API_KEY constant in the code.");
+                return;
+            }
 
             updateStreak();
             
@@ -814,6 +953,7 @@
             const isCrisis = CRISIS_PATTERNS.some(pattern => pattern.test(text));
             if (isCrisis) {
                 displayCrisisResources();
+                return; // Stop further processing if crisis is detected
             }
             
             const placeholder = addMessage("assistant", "...");
@@ -832,11 +972,7 @@
                 currentSystemPrompt = `
                     You are a compassionate, non-judgmental space for the user to vent. Your only job is to listen and acknowledge their raw emotions without trying to fix anything. Use very brief, validating responses. For example, "I hear you," or "That sounds really tough." Do not offer advice unless explicitly asked.
                     `;
-            } else if (isCrisis) {
-                 currentSystemPrompt = `
-                    You are MindMate, a compassionate listener. The user may be in severe distress. Your top priority is to validate their feelings gently and provide immediate, stigma-free support resources without alarm. Do not provide instructions for self-harm or attempt to 'fix' their problem.
-                    `;
-            }
+            } 
             
             const payload = {
                 contents: [{ parts: [{ text: text }] }],
@@ -859,16 +995,24 @@
                 }
 
                 const result = await response.json();
-                const aiResponse = result.candidates[0].content.parts[0].text;
+                let aiResponse = result.candidates[0].content.parts[0].text;
                 
-                updateMessage(placeholder, aiResponse);
+                // Cognitive Distortion Catcher
+                for (const distortion in COGNITIVE_DISTORTIONS) {
+                    if (aiResponse.includes(distortion)) {
+                        aiResponse = COGNITIVE_DISTORTIONS[distortion];
+                        break;
+                    }
+                }
+
+                updateMessage(placeholder, aiResponse, true);
+                speak(aiResponse);
                 displayQuickTip();
                 chatHistory.push({ role: 'user', content: text });
                 chatHistory.push({ role: 'assistant', content: aiResponse });
                 localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
                 generateAffirmation();
                 
-                // Add a gentle prompt for breathing exercise based on mood
                 if (autoMood === '😨 Anxious' || autoMood === '😟 Stressed' || autoMood === '😔 Sad') {
                     addMessage('system', "I sense you might be feeling a bit overwhelmed. Would you like to try a 1-minute guided breathing exercise?");
                 }
@@ -888,37 +1032,89 @@
             }, 5 * 60 * 1000); // 5 minutes
         }
 
-        function addMessage(role, text) {
+        function addMessage(role, text, withVoiceBtn = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
             const avatarEmoji = role === 'user' ? '👤' : AVATARS[localStorage.getItem('buddyAvatar') || 'robot'];
             const avatar = `<div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold">${avatarEmoji}</div>`;
             const messageContent = role === 'user' ? text : text.replace(/\n/g, '<br>');
+            let voiceBtnHtml = '';
+            if (withVoiceBtn) {
+                 voiceBtnHtml = `
+                    <button class="ml-2 w-6 h-6 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center text-white" onclick="pronounceText(this)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    </button>
+                 `;
+            }
             messageDiv.innerHTML = `
                 <div class="flex items-start gap-3 max-w-[75%]">
                     ${role === 'user' ? '' : avatar}
-                    <div class="bg-gray-700 rounded-xl p-4 text-sm break-words whitespace-pre-wrap">
-                        ${messageContent}
+                    <div class="flex flex-col items-start">
+                      <div class="bg-gray-700 rounded-xl p-4 text-sm break-words whitespace-pre-wrap flex items-center">
+                          <span class="message-text">${messageContent}</span>
+                          ${voiceBtnHtml}
+                      </div>
                     </div>
                     ${role === 'user' ? avatar : ''}
                 </div>
             `;
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            return messageDiv.querySelector('div:last-child');
+            return messageDiv.querySelector('.message-text');
         }
 
-        function updateMessage(element, newText) {
+        function updateMessage(element, newText, withVoiceBtn = false) {
             element.innerHTML = newText.replace(/\n/g, '<br>');
+            if (withVoiceBtn) {
+                const parentDiv = element.closest('.flex.items-start');
+                if (parentDiv && !parentDiv.querySelector('.lucide-volume-2')) {
+                    const voiceBtnHtml = `
+                        <button class="ml-2 w-6 h-6 bg-gray-600 hover:bg-gray-500 rounded-full flex items-center justify-center text-white" onclick="pronounceText(this)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                        </button>
+                    `;
+                    element.innerHTML += voiceBtnHtml;
+                }
+            }
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         function displayInitialMessage() {
             const initialPrompt = "Hi there. I'm MindMate, a safe space to talk. How can I support you today?";
-            addMessage("assistant", initialPrompt);
+            addMessage("assistant", initialPrompt, true);
         }
 
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            synthesis.speak(utterance);
+        }
+
+        function stopSpeaking() {
+            synthesis.cancel();
+        }
+
+        function pronounceText(buttonElement) {
+             const messageText = buttonElement.closest('.bg-gray-700').querySelector('.message-text').textContent;
+             speak(messageText);
+        }
+        
         // --- AI-Powered Affirmations ---
+        async function getMotivationalQuote() {
+            const quotePrompt = "Generate a single, short, and motivational quote for a user.";
+            const payload = { contents: [{ parts: [{ text: quotePrompt }] }] };
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const quote = result.candidates[0].content.parts[0].text;
+                addMessage("system", `**Quick Motivation:**<br>${quote}`);
+            } catch (error) {
+                addMessage("system", "Keep going! You're doing great.");
+            }
+        }
         async function generateAffirmation() {
             const storedAffirmationDate = localStorage.getItem('affirmationDate');
             const today = new Date().toDateString();
@@ -963,11 +1159,19 @@
             const tipText = MOOD_SUGGESTIONS[mood] || "Take a deep breath. You're doing your best and that matters.";
             tipCard.classList.remove('hidden');
             tipContent.textContent = tipText;
+            displayPlaylist();
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         function displayCrisisResources() {
             crisisCard.classList.remove('hidden');
+            const storedPlan = localStorage.getItem('sosPlan');
+            if(storedPlan) {
+                sosPlanDisplay.textContent = storedPlan;
+                sosPlanDisplay.classList.remove('hidden');
+            } else {
+                sosPlanDisplay.classList.add('hidden');
+            }
             crisisResources.innerHTML = HELPLINES.map(h => {
                 let text = `${h.country} - ${h.service}`;
                 if (h.number) text += ` - Call: ${h.number}`;
@@ -1028,6 +1232,26 @@
         }
         
         // --- Guided Meditation ---
+        function startGuidedBreathing() {
+            openModal('breathing-modal');
+            const breathingStates = ["Breathe In...", "Hold...", "Breathe Out...", "Hold..."];
+            let stateIndex = 0;
+            
+            breathingText.textContent = breathingStates[0];
+            breathingCircle.style.animationDuration = '4s';
+
+            breathingTimer = setInterval(() => {
+                stateIndex = (stateIndex + 1) % breathingStates.length;
+                breathingText.textContent = breathingStates[stateIndex];
+            }, 1000);
+        }
+
+        function stopBreathing() {
+            clearInterval(breathingTimer);
+            breathingCircle.style.animation = 'none';
+            closeModal('breathing-modal');
+        }
+
         let meditationAudio = new SpeechSynthesisUtterance();
         let meditationIndex = 0;
         let meditationIsPlaying = false;
@@ -1077,7 +1301,7 @@
                 closeModal('journal-modal');
                 return;
             }
-            const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]').map(entry => atob(entry));
+            const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]');
             const newEntry = btoa(journalEntry.value);
             entries.push(newEntry);
             localStorage.setItem('journalEntries', JSON.stringify(entries));
